@@ -18,7 +18,7 @@ const getHeaders = () => ({
   'Upgrade-Insecure-Requests': '1'
 });
 
-// Scraper genérico - adaptar selectores según el sitio
+// Scraper optimizado para Fragrantica.com
 export const scrapePerfume = async (url) => {
   // Verificar caché
   const cached = cacheService.get(url);
@@ -39,42 +39,18 @@ export const scrapePerfume = async (url) => {
     
     const $ = cheerio.load(response.data);
     
-    // Selectores genéricos - ADAPTAR según el sitio web objetivo
+    // Extraer datos usando selectores de Fragrantica
     const perfume = {
       id: uuidv4(),
-      name: extractText($, [
-        'h1[itemprop="name"]',
-        'h1.product-title',
-        'h1.perfume-name',
-        '.product-name h1',
-        'h1'
-      ]),
-      brand: extractText($, [
-        '[itemprop="brand"]',
-        '.brand-name',
-        '.designer-name',
-        'a[href*="/brand/"]',
-        '.manufacturer'
-      ]),
+      name: extractName($),
+      brand: extractBrand($),
       year: extractYear($),
-      perfumer: extractText($, [
-        '.perfumer-name',
-        '[itemprop="author"]',
-        '.nose-name'
-      ]),
+      perfumer: extractPerfumer($),
       gender: extractGender($),
-      concentration: extractText($, [
-        '.concentration',
-        '.product-type',
-        '[data-concentration]'
-      ]),
+      concentration: extractConcentration($),
       notes: extractNotes($),
-      description: extractText($, [
-        '[itemprop="description"]',
-        '.product-description',
-        '.fragrance-description',
-        '.description p'
-      ]),
+      accords: extractAccords($),
+      description: extractDescription($),
       imageUrl: extractImage($),
       rating: extractRating($),
       sourceUrl: url,
@@ -94,48 +70,150 @@ export const scrapePerfume = async (url) => {
   }
 };
 
-// Funciones auxiliares de extracción
-function extractText($, selectors) {
-  for (const selector of selectors) {
-    const text = $(selector).first().text().trim();
-    if (text) return text;
+// Extraer nombre del perfume
+// Formato en Fragrantica: "Sauvage Dior for men" -> extraemos solo el nombre
+function extractName($) {
+  const h1Text = $('h1[itemprop="name"]').text().trim();
+  if (h1Text) {
+    // Remover el género (for men, for women) y la marca
+    const cleanName = h1Text
+      .replace(/\s+for\s+(men|women)\s*$/i, '')
+      .trim();
+    
+    // La marca está al final, separar nombre de marca
+    const brand = $('span[itemprop="name"]').first().text().trim() || 
+                  $('p[itemprop="brand"] span[itemprop="name"]').text().trim();
+    
+    if (brand && cleanName.endsWith(brand)) {
+      return cleanName.slice(0, -brand.length).trim();
+    }
+    return cleanName;
   }
   return null;
 }
 
+// Extraer marca
+function extractBrand($) {
+  // Selector principal de Fragrantica
+  const brand = $('p[itemprop="brand"] span[itemprop="name"]').text().trim() ||
+                $('span[itemprop="name"]').first().text().trim() ||
+                $('[itemprop="brand"] [itemprop="name"]').text().trim();
+  
+  if (brand) return brand;
+  
+  // Fallback: extraer del enlace del diseñador
+  const designerLink = $('a[href*="/designers/"]').first();
+  if (designerLink.length) {
+    return designerLink.text().trim();
+  }
+  
+  return null;
+}
+
+// Extraer año de lanzamiento
 function extractYear($) {
-  const yearPatterns = [
-    /\b(19|20)\d{2}\b/
+  const bodyText = $('body').text();
+  
+  // Buscar patrones comunes en Fragrantica
+  const patterns = [
+    /launched\s+in\s+(\d{4})/i,
+    /was\s+launched\s+in\s+(\d{4})/i,
+    /from\s+(\d{4})/i,
+    /\((\d{4})\)/
   ];
   
-  const yearSelectors = ['.year', '.launch-year', '[data-year]', '.release-date'];
-  
-  for (const selector of yearSelectors) {
-    const text = $(selector).text();
-    for (const pattern of yearPatterns) {
-      const match = text.match(pattern);
-      if (match) return parseInt(match[0]);
+  for (const pattern of patterns) {
+    const match = bodyText.match(pattern);
+    if (match) {
+      const year = parseInt(match[1]);
+      if (year >= 1900 && year <= new Date().getFullYear()) {
+        return year;
+      }
     }
   }
   
-  // Buscar en el texto general
-  const bodyText = $('body').text();
-  const match = bodyText.match(/launched in (\d{4})|año (\d{4})|from (\d{4})/i);
-  if (match) return parseInt(match[1] || match[2] || match[3]);
+  return null;
+}
+
+// Extraer perfumista/nariz
+function extractPerfumer($) {
+  // En Fragrantica, los perfumistas aparecen en enlaces específicos
+  const perfumerLink = $('a[href*="/noses/"]');
+  if (perfumerLink.length) {
+    const perfumers = [];
+    perfumerLink.each((_, el) => {
+      const name = $(el).text().trim();
+      if (name && !perfumers.includes(name)) {
+        perfumers.push(name);
+      }
+    });
+    return perfumers.length > 0 ? perfumers.join(', ') : null;
+  }
+  
+  // Fallback: buscar texto con "created by" o "nose"
+  const text = $('body').text();
+  const creatorMatch = text.match(/(?:created\s+by|nose[s]?:?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i);
+  if (creatorMatch) {
+    return creatorMatch[1].trim();
+  }
   
   return null;
 }
 
+// Extraer género
 function extractGender($) {
-  const text = $('body').text().toLowerCase();
+  const h1Text = $('h1[itemprop="name"]').text().toLowerCase();
   
-  if (text.includes('unisex') || text.includes('shared')) return 'unisex';
-  if (text.includes('for women') || text.includes('femenino') || text.includes('mujer')) return 'feminine';
-  if (text.includes('for men') || text.includes('masculino') || text.includes('hombre')) return 'masculine';
+  if (h1Text.includes('for women') || h1Text.includes('pour femme')) {
+    return 'feminine';
+  }
+  if (h1Text.includes('for men') || h1Text.includes('pour homme')) {
+    return 'masculine';
+  }
+  if (h1Text.includes('unisex') || h1Text.includes('for women and men')) {
+    return 'unisex';
+  }
+  
+  // Buscar en el cuerpo del texto
+  const bodyText = $('body').text().toLowerCase();
+  if (bodyText.includes('for women and men') || bodyText.includes('unisex')) {
+    return 'unisex';
+  }
+  if (bodyText.includes('for women')) {
+    return 'feminine';
+  }
+  if (bodyText.includes('for men')) {
+    return 'masculine';
+  }
   
   return 'unisex';
 }
 
+// Extraer concentración
+function extractConcentration($) {
+  const h1Text = $('h1').text();
+  const bodyText = $('body').text();
+  const fullText = (h1Text + ' ' + bodyText).toLowerCase();
+  
+  const concentrations = [
+    { pattern: /\bextrait\b|\bextract\b|\bparfum\b/i, value: 'Extrait de Parfum' },
+    { pattern: /\beau\s+de\s+parfum\b|\bedp\b/i, value: 'Eau de Parfum' },
+    { pattern: /\beau\s+de\s+toilette\b|\bedt\b/i, value: 'Eau de Toilette' },
+    { pattern: /\beau\s+de\s+cologne\b|\bedc\b/i, value: 'Eau de Cologne' },
+    { pattern: /\beau\s+fraiche\b/i, value: 'Eau Fraiche' },
+    { pattern: /\bparfum\b/i, value: 'Parfum' }
+  ];
+  
+  for (const { pattern, value } of concentrations) {
+    if (pattern.test(fullText)) {
+      return value;
+    }
+  }
+  
+  return null;
+}
+
+// Extraer notas olfativas (pirámide)
 function extractNotes($) {
   const notes = {
     top: [],
@@ -143,69 +221,181 @@ function extractNotes($) {
     base: []
   };
   
-  // Selectores comunes para notas
-  const topSelectors = ['.top-notes', '.head-notes', '[data-notes="top"]'];
-  const heartSelectors = ['.heart-notes', '.middle-notes', '[data-notes="heart"]'];
-  const baseSelectors = ['.base-notes', '.bottom-notes', '[data-notes="base"]'];
+  // Fragrantica estructura las notas en pyramide-class
+  // Las notas están en elementos con data-note o en spans dentro de divs específicos
   
-  const extractNoteList = (selectors) => {
-    for (const selector of selectors) {
-      const $container = $(selector);
-      if ($container.length) {
-        const noteTexts = [];
-        $container.find('a, span, li').each((_, el) => {
-          const text = $(el).text().trim();
-          if (text && text.length < 50) noteTexts.push(text);
-        });
-        if (noteTexts.length) return noteTexts;
+  // Método 1: Buscar por estructura de acordes/notas
+  const noteContainers = $('[id*="note"], [class*="note"]');
+  
+  // Método 2: Buscar enlaces a notas de perfume
+  const topNotesSection = $('b:contains("Top Notes"), b:contains("Top notes"), h4:contains("Top")').parent();
+  const heartNotesSection = $('b:contains("Middle Notes"), b:contains("Heart Notes"), b:contains("Heart notes"), h4:contains("Heart"), h4:contains("Middle")').parent();
+  const baseNotesSection = $('b:contains("Base Notes"), b:contains("Base notes"), h4:contains("Base")').parent();
+  
+  // Extraer notas de cada sección
+  const extractNotesFromSection = ($section) => {
+    const notesList = [];
+    $section.find('a[href*="/notes/"], span').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text && text.length < 50 && !text.includes('Notes')) {
+        notesList.push(text);
       }
-    }
-    return [];
+    });
+    return [...new Set(notesList)]; // Eliminar duplicados
   };
   
-  notes.top = extractNoteList(topSelectors);
-  notes.heart = extractNoteList(heartSelectors);
-  notes.base = extractNoteList(baseSelectors);
+  if (topNotesSection.length) {
+    notes.top = extractNotesFromSection(topNotesSection);
+  }
+  if (heartNotesSection.length) {
+    notes.heart = extractNotesFromSection(heartNotesSection);
+  }
+  if (baseNotesSection.length) {
+    notes.base = extractNotesFromSection(baseNotesSection);
+  }
+  
+  // Método alternativo: buscar todos los enlaces de notas y clasificar por posición
+  if (notes.top.length === 0 && notes.heart.length === 0 && notes.base.length === 0) {
+    const allNoteLinks = $('a[href*="/notes/"]');
+    const allNotes = [];
+    
+    allNoteLinks.each((_, el) => {
+      const text = $(el).text().trim();
+      if (text && text.length < 50) {
+        allNotes.push(text);
+      }
+    });
+    
+    // Si no hay clasificación, poner todo en top
+    if (allNotes.length > 0) {
+      notes.top = [...new Set(allNotes)];
+    }
+  }
   
   return notes;
 }
 
+// Extraer acordes principales
+function extractAccords($) {
+  const accords = [];
+  
+  // Fragrantica muestra acordes en divs con clase accord-bar
+  $('.accord-bar').each((_, el) => {
+    const accordName = $(el).text().trim();
+    const style = $(el).attr('style') || '';
+    
+    // Extraer porcentaje del width del estilo
+    const widthMatch = style.match(/width:\s*([\d.]+)%/);
+    const percentage = widthMatch ? parseFloat(widthMatch[1]) : 0;
+    
+    // Extraer color de fondo
+    const bgMatch = style.match(/background:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    const color = bgMatch ? `rgb(${bgMatch[1]}, ${bgMatch[2]}, ${bgMatch[3]})` : null;
+    
+    if (accordName) {
+      accords.push({
+        name: accordName,
+        percentage: Math.round(percentage),
+        color
+      });
+    }
+  });
+  
+  return accords;
+}
+
+// Extraer descripción
+function extractDescription($) {
+  // Fragrantica tiene la descripción en varios posibles lugares
+  const selectors = [
+    '[itemprop="description"]',
+    '.fragrantica-blockquote',
+    'div[class*="description"]',
+    '.accord-text',
+    'p.description'
+  ];
+  
+  for (const selector of selectors) {
+    const text = $(selector).first().text().trim();
+    if (text && text.length > 50) {
+      return text;
+    }
+  }
+  
+  // Buscar el párrafo más largo que parezca una descripción
+  let longestP = '';
+  $('p').each((_, el) => {
+    const text = $(el).text().trim();
+    if (text.length > longestP.length && text.length > 100 && text.length < 2000) {
+      // Verificar que no sea navegación o texto irrelevante
+      if (!text.includes('Login') && !text.includes('Register') && !text.includes('©')) {
+        longestP = text;
+      }
+    }
+  });
+  
+  return longestP || null;
+}
+
+// Extraer imagen principal
 function extractImage($) {
+  // Imagen principal del perfume en Fragrantica
   const imgSelectors = [
     'img[itemprop="image"]',
-    '.product-image img',
-    '.perfume-image img',
-    '.main-image img',
-    'img.product-img'
+    'picture source[type="image/avif"]',
+    'picture source[type="image/webp"]',
+    'picture img',
+    'img[alt*="perfume"]',
+    '.perfume-image img'
   ];
   
   for (const selector of imgSelectors) {
-    const src = $(selector).first().attr('src') || $(selector).first().attr('data-src');
+    const $el = $(selector).first();
+    let src = $el.attr('src') || $el.attr('srcset') || $el.attr('data-src');
+    
     if (src) {
-      // Convertir a URL absoluta si es necesario
-      if (src.startsWith('//')) return `https:${src}`;
-      if (src.startsWith('/')) return src; // Se necesitará el dominio base
-      return src;
+      // Limpiar srcset si tiene múltiples URLs
+      if (src.includes(' ')) {
+        src = src.split(' ')[0].split(',')[0].trim();
+      }
+      
+      // Convertir a URL absoluta
+      if (src.startsWith('//')) {
+        return `https:${src}`;
+      }
+      if (src.startsWith('/')) {
+        return `https://www.fragrantica.com${src}`;
+      }
+      if (src.startsWith('http')) {
+        return src;
+      }
     }
   }
   
   return null;
 }
 
+// Extraer rating
 function extractRating($) {
+  // Fragrantica muestra ratings de diferentes formas
   const ratingSelectors = [
     '[itemprop="ratingValue"]',
     '.rating-value',
-    '.score',
+    '.vote-button-legend',
     '[data-rating]'
   ];
   
   for (const selector of ratingSelectors) {
-    const $el = $(selector);
+    const $el = $(selector).first();
     const value = $el.attr('content') || $el.attr('data-rating') || $el.text();
     const parsed = parseFloat(value);
-    if (!isNaN(parsed) && parsed >= 0 && parsed <= 10) {
-      return parsed;
+    
+    if (!isNaN(parsed)) {
+      // Normalizar a escala 0-5 si está en escala 0-10
+      if (parsed > 5) {
+        return Math.round((parsed / 2) * 10) / 10;
+      }
+      return Math.round(parsed * 10) / 10;
     }
   }
   
