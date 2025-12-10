@@ -5,99 +5,135 @@ import { ApiError } from '../middleware/errorHandler.js';
 const router = express.Router();
 
 // GET /api/perfumes - Lista con paginación y filtros
-router.get('/', (req, res) => {
-  const { page = 1, limit = 12, brand, gender, search, sortBy } = req.query;
-  
-  const result = dataStore.getAll({
-    page: parseInt(page),
-    limit: parseInt(limit),
-    brand,
-    gender,
-    search,
-    sortBy
-  });
-  
-  res.json({ success: true, ...result });
+router.get('/', async (req, res, next) => {
+  try {
+    const { page = 1, limit = 12, brand, gender, search, sortBy } = req.query;
+    
+    const result = await dataStore.getAll({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      brand,
+      gender,
+      search,
+      sortBy
+    });
+    
+    res.json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /api/perfumes/stats - Estadísticas
-router.get('/stats', (req, res) => {
-  const stats = dataStore.getStats();
-  res.json({ success: true, data: stats });
+router.get('/stats', async (req, res, next) => {
+  try {
+    const stats = await dataStore.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /api/perfumes/brands - Lista de marcas
-router.get('/brands', (req, res) => {
-  const brands = dataStore.getBrands();
-  res.json({ success: true, data: brands });
+router.get('/brands', async (req, res, next) => {
+  try {
+    const brands = await dataStore.getBrands();
+    res.json({ success: true, data: brands });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /api/perfumes/search - Búsqueda
-router.get('/search', (req, res) => {
-  const { q, page = 1, limit = 12 } = req.query;
-  
-  if (!q) {
-    throw new ApiError('Parámetro de búsqueda requerido', 400);
+router.get('/search', async (req, res, next) => {
+  try {
+    const { q, page = 1, limit = 12 } = req.query;
+    
+    if (!q) {
+      throw new ApiError('Parámetro de búsqueda requerido', 400);
+    }
+    
+    const result = await dataStore.getAll({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search: q
+    });
+    
+    res.json({ success: true, ...result });
+  } catch (error) {
+    next(error);
   }
-  
-  const result = dataStore.getAll({
-    page: parseInt(page),
-    limit: parseInt(limit),
-    search: q
-  });
-  
-  res.json({ success: true, ...result });
 });
 
 // GET /api/perfumes/brand/:brand - Por marca
-router.get('/brand/:brand', (req, res) => {
-  const perfumes = dataStore.getByBrand(req.params.brand);
-  res.json({ success: true, data: perfumes });
+router.get('/brand/:brand', async (req, res, next) => {
+  try {
+    const perfumes = await dataStore.getByBrand(req.params.brand);
+    res.json({ success: true, data: perfumes });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /api/perfumes/:id - Detalle
-router.get('/:id', (req, res, next) => {
-  const perfume = dataStore.getById(req.params.id);
-  
-  if (!perfume) {
-    return next(new ApiError('Perfume no encontrado', 404));
+router.get('/:id', async (req, res, next) => {
+  try {
+    const perfume = await dataStore.getById(req.params.id);
+    
+    if (!perfume) {
+      return next(new ApiError('Perfume no encontrado', 404));
+    }
+    
+    res.json({ success: true, data: perfume });
+  } catch (error) {
+    next(error);
   }
-  
-  res.json({ success: true, data: perfume });
 });
 
 // POST /api/perfumes - Crear manualmente
-router.post('/', (req, res, next) => {
-  const { name, brand } = req.body;
-  
-  if (!name || !brand) {
-    return next(new ApiError('Nombre y marca son requeridos', 400));
+router.post('/', async (req, res, next) => {
+  try {
+    const { name, brand } = req.body;
+    
+    if (!name || !brand) {
+      return next(new ApiError('Nombre y marca son requeridos', 400));
+    }
+    
+    const perfume = await dataStore.add(req.body);
+    res.status(201).json({ success: true, data: perfume });
+  } catch (error) {
+    next(error);
   }
-  
-  const perfume = dataStore.add(req.body);
-  res.status(201).json({ success: true, data: perfume });
 });
 
 // PUT /api/perfumes/:id - Actualizar
-router.put('/:id', (req, res, next) => {
-  const perfume = dataStore.update(req.params.id, req.body);
-  
-  if (!perfume) {
-    return next(new ApiError('Perfume no encontrado', 404));
+router.put('/:id', async (req, res, next) => {
+  try {
+    const perfume = await dataStore.update(req.params.id, req.body);
+    
+    if (!perfume) {
+      return next(new ApiError('Perfume no encontrado', 404));
+    }
+    
+    res.json({ success: true, data: perfume });
+  } catch (error) {
+    next(error);
   }
-  
-  res.json({ success: true, data: perfume });
 });
 
 // DELETE /api/perfumes/:id - Eliminar
-router.delete('/:id', (req, res, next) => {
-  const deleted = dataStore.delete(req.params.id);
-  
-  if (!deleted) {
-    return next(new ApiError('Perfume no encontrado', 404));
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const deleted = await dataStore.delete(req.params.id);
+    
+    if (!deleted) {
+      return next(new ApiError('Perfume no encontrado', 404));
+    }
+    
+    res.json({ success: true, message: 'Perfume eliminado' });
+  } catch (error) {
+    next(error);
   }
-  
-  res.json({ success: true, message: 'Perfume eliminado' });
 });
 
 export default router;

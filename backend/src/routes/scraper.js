@@ -44,7 +44,7 @@ router.get('/perfume', requireApiKey, scrapeLimiter, async (req, res, next) => {
     
     // Guardar automáticamente si se indica
     if (save === 'true' && perfume) {
-      dataStore.add(perfume);
+      await dataStore.add(perfume);
       console.log(`💾 Perfume guardado: ${perfume.name}`);
     }
     
@@ -86,7 +86,7 @@ router.post('/batch', requireApiKey, async (req, res, next) => {
         const perfume = await scrapePerfume(url);
         
         if (save && perfume) {
-          dataStore.add(perfume);
+          await dataStore.add(perfume);
         }
         
         results.push({ url, success: true, data: perfume });
