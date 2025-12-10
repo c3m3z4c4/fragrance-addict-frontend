@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import perfumeRoutes from './routes/perfumes.js';
 import scraperRoutes from './routes/scraper.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { initDatabase } from './services/dataStore.js';
 
 dotenv.config();
 
@@ -46,6 +47,17 @@ app.use('/api/scrape', scraperRoutes);
 // Error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-});
+// Inicializar base de datos y arrancar servidor
+const startServer = async () => {
+  try {
+    await initDatabase();
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Error starting server:', error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
