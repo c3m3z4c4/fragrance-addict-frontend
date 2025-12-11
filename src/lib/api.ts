@@ -150,7 +150,8 @@ export async function getCacheStats(): Promise<{ hits: number; misses: number; k
     },
   });
   if (!response.ok) throw new Error('Failed to fetch cache stats');
-  return response.json();
+  const data = await response.json();
+  return data.data || data;
 }
 
 // Clear scraper cache
@@ -162,5 +163,113 @@ export async function clearCache(): Promise<{ success: boolean }> {
     },
   });
   if (!response.ok) throw new Error('Failed to clear cache');
+  return response.json();
+}
+
+// ============= SITEMAP & QUEUE FUNCTIONS =============
+
+export interface QueueStatus {
+  processing: boolean;
+  current: string | null;
+  processed: number;
+  failed: number;
+  remaining: number;
+  total: number;
+  startedAt: string | null;
+  errors: Array<{ url: string; error: string; time: string }>;
+}
+
+// Fetch URLs from Fragrantica sitemap or brand page
+export async function fetchSitemapUrls(brand?: string, limit = 100): Promise<{ success: boolean; urls?: string[]; count?: number; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/sitemap`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ brand, limit }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch sitemap' }));
+    return { success: false, error: error.error || 'Failed to fetch sitemap' };
+  }
+  
+  const data = await response.json();
+  return { success: true, urls: data.urls, count: data.count };
+}
+
+// Add URLs to scraping queue
+export async function addToQueue(urls: string[]): Promise<{ success: boolean; added?: number; skipped?: number; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ urls }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to add to queue' }));
+    return { success: false, error: error.error || 'Failed to add to queue' };
+  }
+  
+  return response.json();
+}
+
+// Start queue processing
+export async function startQueue(): Promise<{ success: boolean; message?: string; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue/start`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to start queue' }));
+    return { success: false, error: error.error || 'Failed to start queue' };
+  }
+  
+  return response.json();
+}
+
+// Stop queue processing
+export async function stopQueue(): Promise<{ success: boolean; message?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue/stop`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) throw new Error('Failed to stop queue');
+  return response.json();
+}
+
+// Get queue status
+export async function getQueueStatus(): Promise<QueueStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue/status`, {
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) throw new Error('Failed to get queue status');
+  const data = await response.json();
+  return data;
+}
+
+// Clear queue
+export async function clearQueue(): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue`, {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) throw new Error('Failed to clear queue');
   return response.json();
 }

@@ -3,9 +3,10 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdminPerfumeList } from '@/components/admin/AdminPerfumeList';
 import { ScraperPanel } from '@/components/admin/ScraperPanel';
+import { SitemapImporter } from '@/components/admin/SitemapImporter';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3 } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe } from 'lucide-react';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('perfumes');
@@ -25,7 +26,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -33,6 +34,10 @@ export default function Admin() {
             <TabsTrigger value="scraper" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">Scraper</span>
+            </TabsTrigger>
+            <TabsTrigger value="import" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline">Import</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -46,6 +51,10 @@ export default function Admin() {
 
           <TabsContent value="scraper" className="animate-fade-in">
             <ScraperPanel />
+          </TabsContent>
+
+          <TabsContent value="import" className="animate-fade-in">
+            <SitemapImporter />
           </TabsContent>
 
           <TabsContent value="stats" className="animate-fade-in">
