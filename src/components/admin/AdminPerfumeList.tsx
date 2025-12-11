@@ -55,11 +55,11 @@ export function AdminPerfumeList() {
     },
   });
 
-  const filteredPerfumes = data?.perfumes.filter(
+  const filteredPerfumes = data?.perfumes?.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.brand.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) || [];
 
   const totalPages = data ? Math.ceil(data.total / 15) : 1;
 
