@@ -8,6 +8,7 @@ import PerfumeDetail from "./pages/PerfumeDetail";
 import Favorites from "./pages/Favorites";
 import Brands from "./pages/Brands";
 import About from "./pages/About";
+import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/perfume/:id" element={<PerfumeDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/brands" element={<Brands />} />
