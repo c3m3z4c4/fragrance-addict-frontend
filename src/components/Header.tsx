@@ -6,10 +6,10 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
-  onSearchClick: () => void;
+  onSearchClick?: () => void;
 }
 
-export function Header({ onSearchClick }: HeaderProps) {
+export function Header({ onSearchClick }: HeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { favoritesCount } = useFavorites();
   const location = useLocation();
@@ -51,14 +51,22 @@ export function Header({ onSearchClick }: HeaderProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2 md:gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onSearchClick}
-              className="hover:text-accent"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+            {onSearchClick ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onSearchClick}
+                className="hover:text-accent"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            ) : (
+              <Link to="/">
+                <Button variant="ghost" size="icon" className="hover:text-accent">
+                  <Search className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
 
             <Link to="/favorites">
               <Button variant="ghost" size="icon" className="relative hover:text-accent">

@@ -1,51 +1,31 @@
-import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share2, Star, Check } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, Star } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { SearchModal } from '@/components/SearchModal';
-import { NotePyramid } from '@/components/NotePyramid';
-import { PerfumeCard } from '@/components/PerfumeCard';
+import { NotesPyramidVisual } from '@/components/NotesPyramidVisual';
+import { SimilarPerfumes } from '@/components/SimilarPerfumes';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useFavorites } from '@/hooks/useFavorites';
-import { perfumes } from '@/data/perfumes';
+import { usePerfumeDetail, usePerfumes, findSimilarPerfumes } from '@/hooks/usePerfumeSearch';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 const PerfumeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedSize, setSelectedSize] = useState('100ml');
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  const perfume = perfumes.find(p => p.id === id);
+  const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
+  const { data: allPerfumes } = usePerfumes(1, 50);
 
-  if (!perfume) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-display text-2xl mb-4">Perfume not found</h1>
-          <Link to="/" className="text-accent hover:underline">Return to catalog</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const favorite = isFavorite(perfume.id);
-  const relatedPerfumes = perfumes
-    .filter(p => p.id !== perfume.id && (p.brand === perfume.brand || p.family === perfume.family))
-    .slice(0, 4);
-
-  const sizes = [
-    { label: '30ml', price: perfume.price * 0.4 },
-    { label: '50ml', price: perfume.price * 0.65 },
-    { label: '100ml', price: perfume.price },
-  ];
-
-  const currentPrice = sizes.find(s => s.label === selectedSize)?.price || perfume.price;
+  const favorite = perfume ? isFavorite(perfume.id) : false;
+  const similarPerfumes = perfume && allPerfumes?.perfumes 
+    ? findSimilarPerfumes(perfume, allPerfumes.perfumes, 4) 
+    : [];
 
   const handleShare = async () => {
+    if (!perfume) return;
     if (navigator.share) {
       await navigator.share({
         title: `${perfume.name} by ${perfume.brand}`,
@@ -60,10 +40,46 @@ const PerfumeDetail = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <Skeleton className="h-8 w-32 mb-8" />
+          <div className="grid lg:grid-cols-2 gap-16">
+            <Skeleton className="aspect-square rounded-lg" />
+            <div className="space-y-6">
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-12 w-3/4" />
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !perfume) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="font-display text-2xl mb-4">Perfume not found</h1>
+            <Link to="/" className="text-accent hover:underline">Return to search</Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onSearchClick={() => setIsSearchOpen(true)} />
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <Header />
 
       <main className="flex-1">
         {/* Breadcrumb */}
@@ -73,7 +89,7 @@ const PerfumeDetail = () => {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to catalog
+            Back
           </button>
         </div>
 
@@ -84,7 +100,7 @@ const PerfumeDetail = () => {
             <div className="relative opacity-0 animate-fade-in-left" style={{ animationFillMode: 'forwards' }}>
               <div className="aspect-square lg:aspect-[4/5] rounded-lg overflow-hidden bg-muted">
                 <img
-                  src={perfume.imageUrl}
+                  src={perfume.imageUrl || '/placeholder.svg'}
                   alt={perfume.name}
                   className="w-full h-full object-cover"
                 />
@@ -134,120 +150,111 @@ const PerfumeDetail = () => {
                 </h1>
                 
                 {/* Rating */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={cn(
-                          "h-4 w-4",
-                          star <= Math.floor(perfume.rating)
-                            ? "text-amber fill-current"
-                            : "text-muted"
-                        )}
-                      />
-                    ))}
+                {perfume.rating && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={cn(
+                            "h-4 w-4",
+                            star <= Math.floor(perfume.rating || 0)
+                              ? "text-amber fill-current"
+                              : "text-muted"
+                          )}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium">{perfume.rating.toFixed(1)}</span>
+                    {perfume.concentration && (
+                      <span className="text-sm text-muted-foreground">· {perfume.concentration}</span>
+                    )}
                   </div>
-                  <span className="text-sm font-medium">{perfume.rating}</span>
-                  <span className="text-sm text-muted-foreground">· {perfume.concentration}</span>
-                </div>
+                )}
               </div>
 
               {/* Meta */}
               <div className="grid grid-cols-2 gap-4 mb-8 py-6 border-y border-border">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Perfumer</p>
-                  <p className="font-medium">{perfume.perfumer}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Year</p>
-                  <p className="font-medium">{perfume.year}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Gender</p>
-                  <p className="font-medium capitalize">{perfume.gender}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Family</p>
-                  <p className="font-medium">{perfume.family}</p>
-                </div>
+                {perfume.perfumer && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Perfumer</p>
+                    <p className="font-medium">{perfume.perfumer}</p>
+                  </div>
+                )}
+                {perfume.year && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Year</p>
+                    <p className="font-medium">{perfume.year}</p>
+                  </div>
+                )}
+                {perfume.gender && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Gender</p>
+                    <p className="font-medium capitalize">{perfume.gender}</p>
+                  </div>
+                )}
+                {perfume.concentration && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Concentration</p>
+                    <p className="font-medium">{perfume.concentration}</p>
+                  </div>
+                )}
               </div>
+
+              {/* Accords */}
+              {perfume.accords && perfume.accords.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="font-display text-lg mb-4">Main Accords</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {perfume.accords.map((accord, index) => (
+                      <span
+                        key={accord}
+                        className="px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-sm font-medium text-foreground"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        {accord}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Description */}
-              <div className="mb-8">
-                <h2 className="font-display text-lg mb-3">About this fragrance</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {perfume.description}
-                </p>
-              </div>
+              {perfume.description && (
+                <div className="mb-8">
+                  <h2 className="font-display text-lg mb-3">About this fragrance</h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {perfume.description}
+                  </p>
+                </div>
+              )}
 
               {/* Notes */}
-              <div className="mb-8">
-                <h2 className="font-display text-lg mb-4">Fragrance Notes</h2>
-                <NotePyramid notes={perfume.notes} />
-              </div>
+              {perfume.notes && (
+                <NotesPyramidVisual notes={perfume.notes} />
+              )}
 
-              {/* Size Selection */}
-              <div className="mb-8">
-                <h2 className="font-display text-lg mb-4">Select Size</h2>
-                <div className="flex gap-3">
-                  {sizes.map((size) => (
-                    <button
-                      key={size.label}
-                      onClick={() => setSelectedSize(size.label)}
-                      className={cn(
-                        "flex-1 py-3 px-4 rounded border-2 transition-all",
-                        selectedSize === size.label
-                          ? "border-accent bg-accent/5"
-                          : "border-border hover:border-secondary"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{size.label}</span>
-                        {selectedSize === size.label && (
-                          <Check className="h-4 w-4 text-accent" />
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">€{Math.round(size.price)}</p>
-                    </button>
-                  ))}
+              {/* Source link */}
+              {perfume.sourceUrl && (
+                <div className="mt-8 pt-6 border-t border-border">
+                  <a
+                    href={perfume.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-accent transition-colors"
+                  >
+                    View original source →
+                  </a>
                 </div>
-              </div>
-
-              {/* Price & Add to Cart */}
-              <div className="flex items-center gap-6">
-                <div>
-                  <p className="text-3xl font-semibold">€{Math.round(currentPrice)}</p>
-                  <p className="text-sm text-muted-foreground">Free shipping over €100</p>
-                </div>
-                <Button
-                  size="lg"
-                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-medium"
-                  onClick={() => {
-                    toast({
-                      title: "Added to cart",
-                      description: `${perfume.name} (${selectedSize}) has been added to your cart.`,
-                    });
-                  }}
-                >
-                  Add to Cart
-                </Button>
-              </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Related Perfumes */}
-        {relatedPerfumes.length > 0 && (
-          <section className="container mx-auto px-4 py-16 border-t border-border">
-            <h2 className="font-display text-2xl md:text-3xl mb-8 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
-              You May Also Like
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedPerfumes.map((p, index) => (
-                <PerfumeCard key={p.id} perfume={p} index={index} />
-              ))}
-            </div>
+        {/* Similar Perfumes */}
+        {similarPerfumes.length > 0 && (
+          <section className="container mx-auto px-4 py-12 border-t border-border">
+            <SimilarPerfumes perfumes={similarPerfumes} />
           </section>
         )}
       </main>
