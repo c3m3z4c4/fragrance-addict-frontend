@@ -15,10 +15,11 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
   const location = useLocation();
 
   const navLinks = [
-    { href: '/', label: 'Catalog' },
+    { href: '/', label: 'Home' },
     { href: '/favorites', label: 'Favorites' },
     { href: '/brands', label: 'Brands' },
     { href: '/about', label: 'About' },
+    { href: '/admin', label: 'Admin' },
   ];
 
   return (

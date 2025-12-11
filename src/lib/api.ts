@@ -77,3 +77,90 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
   if (!response.ok) throw new Error('Failed to fetch stats');
   return response.json();
 }
+
+// ============= ADMIN FUNCTIONS (Protected) =============
+
+const getApiKey = () => import.meta.env.VITE_ADMIN_API_KEY || '';
+
+// Scrape a perfume from URL
+export async function scrapePerfume(url: string, save = true): Promise<{ success: boolean; data?: APIPerfume; error?: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/scrape/perfume?url=${encodeURIComponent(url)}&save=${save}`,
+    {
+      headers: {
+        'x-api-key': getApiKey(),
+      },
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Scraping failed' }));
+    return { success: false, error: error.error || 'Scraping failed' };
+  }
+  
+  const data = await response.json();
+  return { success: true, data: data.data || data };
+}
+
+// Batch scrape multiple URLs
+export async function batchScrapePerfumes(
+  urls: string[],
+  save = true
+): Promise<{ success: boolean; results?: Array<{ url: string; success: boolean; data?: APIPerfume; error?: string }>; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/batch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ urls, save }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Batch scraping failed' }));
+    return { success: false, error: error.error || 'Batch scraping failed' };
+  }
+  
+  const data = await response.json();
+  return { success: true, results: data.results };
+}
+
+// Delete a perfume
+export async function deletePerfume(id: string): Promise<{ success: boolean; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/perfumes/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Delete failed' }));
+    return { success: false, error: error.error || 'Delete failed' };
+  }
+  
+  return { success: true };
+}
+
+// Get scraper cache stats
+export async function getCacheStats(): Promise<{ hits: number; misses: number; keys: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/cache/stats`, {
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  if (!response.ok) throw new Error('Failed to fetch cache stats');
+  return response.json();
+}
+
+// Clear scraper cache
+export async function clearCache(): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/cache`, {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  if (!response.ok) throw new Error('Failed to clear cache');
+  return response.json();
+}
