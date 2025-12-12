@@ -11,15 +11,15 @@ export function usePerfumeSearch(query: string) {
 
     const result = useQuery({
         queryKey: ['perfumes', 'search', query],
-        queryFn: () => {
+        queryFn: async () => {
             console.log('📡 queryFn executing for query:', query);
-            return searchPerfumes(query);
+            const data = await searchPerfumes(query);
+            return data || [];
         },
         enabled: query.length >= 2,
         staleTime: 1000 * 60 * 5,
         retry: 1,
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        placeholderData: [],
     });
 
     console.log('🎣 usePerfumeSearch returning:', {
@@ -30,11 +30,13 @@ export function usePerfumeSearch(query: string) {
         dataLength: Array.isArray(result.data) ? result.data.length : 'N/A',
     });
 
-    // Ensure data is always an array
     return {
-        ...result,
         data: Array.isArray(result.data) ? result.data : [],
-    } as typeof result;
+        isLoading: result.isLoading,
+        error: result.error,
+        status: result.status,
+        isFetching: result.isFetching,
+    };
 }
 export function usePerfumes(page = 1, limit = 20) {
     return useQuery({
