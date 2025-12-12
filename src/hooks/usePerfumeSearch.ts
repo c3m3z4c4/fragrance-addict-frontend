@@ -1,42 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-    searchPerfumes,
-    fetchPerfumes,
-    fetchPerfumeById,
-    type APIPerfume,
-} from '@/lib/api';
+import { searchPerfumes, type APIPerfume } from '@/lib/api';
 
 export function usePerfumeSearch(query: string) {
-    console.log('🎣 usePerfumeSearch called with query:', query);
+    const isEnabled = query.length >= 2;
+
+    console.log('🎣 usePerfumeSearch called:', { query, isEnabled });
 
     const result = useQuery({
         queryKey: ['perfumes', 'search', query],
         queryFn: async () => {
-            console.log('📡 queryFn executing for query:', query);
+            console.log('📡 Fetching perfumes for:', query);
             const data = await searchPerfumes(query);
-            return data || [];
+            return Array.isArray(data) ? data : [];
         },
-        enabled: query.length >= 2,
+        enabled: isEnabled,
         staleTime: 1000 * 60 * 5,
         retry: 1,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
 
-    console.log('🎣 usePerfumeSearch returning:', {
-        enabled: query.length >= 2,
-        status: result.status,
-        dataType: typeof result.data,
-        dataIsArray: Array.isArray(result.data),
-        dataLength: Array.isArray(result.data) ? result.data.length : 'N/A',
-    });
-
+    // Always return a safe object
     return {
-        data: Array.isArray(result.data) ? result.data : [],
-        isLoading: result.isLoading,
-        error: result.error,
+        data: isEnabled ? (Array.isArray(result.data) ? result.data : []) : [],
+        isLoading: isEnabled ? result.isLoading : false,
+        error: isEnabled ? result.error : null,
         status: result.status,
-        isFetching: result.isFetching,
-    };
+    } as const;
 }
 export function usePerfumes(page = 1, limit = 20) {
     return useQuery({

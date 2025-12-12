@@ -1,5 +1,4 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
@@ -11,22 +10,11 @@ export default function Search() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
 
-    // Only call hook if query is valid length
-    const shouldSearch = query.length >= 2;
-    const {
-        data: perfumes,
-        isLoading,
-        error,
-    } = usePerfumeSearch(shouldSearch ? query : '');
+    // Always call hook - it handles disabled state internally
+    const { data, isLoading, error } = usePerfumeSearch(query);
 
-    // Memoize perfume list to prevent re-renders
-    const perfumeList = useMemo(() => {
-        if (!perfumes || !Array.isArray(perfumes)) return [];
-        return perfumes.filter((p) => p && p.id);
-    }, [perfumes]);
-
-    // Empty/invalid query
-    if (!shouldSearch) {
+    // Early return for invalid query
+    if (query.length < 2) {
         return (
             <div className="min-h-screen flex flex-col">
                 <Header />
@@ -101,7 +89,7 @@ export default function Search() {
     }
 
     // No results
-    if (perfumeList.length === 0) {
+    if (!data || data.length === 0) {
         return (
             <div className="min-h-screen flex flex-col">
                 <Header />
@@ -133,14 +121,13 @@ export default function Search() {
                         Results for "{query}"
                     </h1>
                     <p className="text-muted-foreground mt-2">
-                        {perfumeList.length}{' '}
-                        {perfumeList.length === 1 ? 'fragrance' : 'fragrances'}{' '}
-                        found
+                        {data.length}{' '}
+                        {data.length === 1 ? 'fragrance' : 'fragrances'} found
                     </p>
                 </div>
 
                 <div className="grid gap-6">
-                    {perfumeList.map((perfume, index) => (
+                    {data.map((perfume, index) => (
                         <Link
                             key={perfume.id}
                             to={`/perfume/${perfume.id}`}
