@@ -126,7 +126,7 @@ export default function Search() {
                     </p>
                 </div>
 
-                <div className="grid gap-6">
+                <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                     {data.map((perfume, index) => (
                         <Link
                             key={perfume.id}
@@ -137,8 +137,8 @@ export default function Search() {
                                 animationFillMode: 'forwards',
                             }}
                         >
-                            <article className="flex flex-col md:flex-row gap-6 p-6 border border-border rounded-lg hover:border-accent/50 hover:shadow-lg transition-all duration-300 bg-card">
-                                <div className="w-full md:w-40 h-40 flex-shrink-0 overflow-hidden rounded-lg bg-secondary/20">
+                            <article className="flex flex-col h-full p-6 border border-border rounded-lg hover:border-accent/50 hover:shadow-lg transition-all duration-300 bg-card">
+                                <div className="w-full h-48 mb-4 flex-shrink-0 overflow-hidden rounded-lg bg-secondary/20">
                                     <img
                                         src={
                                             perfume.imageUrl ||
@@ -149,31 +149,27 @@ export default function Search() {
                                     />
                                 </div>
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-4 mb-2">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground uppercase tracking-wider">
-                                                {perfume.brand || 'Unknown'}
-                                            </p>
-                                            <h2 className="font-display text-xl md:text-2xl font-medium group-hover:text-accent transition-colors">
-                                                {perfume.name || 'Unnamed'}
-                                            </h2>
-                                        </div>
-                                        {perfume.rating &&
-                                            typeof perfume.rating ===
-                                                'number' && (
-                                                <div className="flex items-center gap-1 px-2 py-1 bg-secondary/30 rounded-full flex-shrink-0">
-                                                    <Star className="h-4 w-4 fill-accent text-accent" />
-                                                    <span className="font-medium">
-                                                        {perfume.rating.toFixed(
-                                                            1
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
+                                <div className="flex-1 flex flex-col">
+                                    <div className="mb-3">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                                            {perfume.brand || 'Unknown'}
+                                        </p>
+                                        <h2 className="font-display text-lg font-medium group-hover:text-accent transition-colors line-clamp-2">
+                                            {perfume.name || 'Unnamed'}
+                                        </h2>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 mb-3">
+                                    {perfume.rating &&
+                                        typeof perfume.rating === 'number' && (
+                                            <div className="flex items-center gap-1 mb-3">
+                                                <Star className="h-4 w-4 fill-accent text-accent" />
+                                                <span className="text-sm font-medium">
+                                                    {perfume.rating.toFixed(1)}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                    <div className="flex flex-wrap gap-1.5 mb-3">
                                         {perfume.gender && (
                                             <span className="text-xs px-2 py-1 bg-muted rounded-full capitalize">
                                                 {perfume.gender}
@@ -196,13 +192,13 @@ export default function Search() {
                                     {perfume.notes &&
                                         perfume.notes.top &&
                                         perfume.notes.top.length > 0 && (
-                                            <div className="space-y-2">
+                                            <div className="mb-3">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="text-xs font-medium text-accent">
                                                         Top:
                                                     </span>
                                                     {perfume.notes.top
-                                                        .slice(0, 4)
+                                                        .slice(0, 3)
                                                         .map((note) => (
                                                             <span
                                                                 key={note}
@@ -217,9 +213,9 @@ export default function Search() {
 
                                     {perfume.accords &&
                                         perfume.accords.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                            <div className="flex flex-wrap gap-1 mt-auto">
                                                 {perfume.accords
-                                                    .slice(0, 5)
+                                                    .slice(0, 3)
                                                     .map((accord) => (
                                                         <span
                                                             key={accord}
