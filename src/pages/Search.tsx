@@ -3,7 +3,6 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Search() {
@@ -165,20 +164,7 @@ export default function Search() {
                                             </h2>
                                         </div>
 
-                                        {perfume.rating &&
-                                            typeof perfume.rating ===
-                                                'number' && (
-                                                <div className="flex items-center gap-2 mb-4 pb-4 border-b border-border/50">
-                                                    <Star className="h-5 w-5 fill-accent text-accent" />
-                                                    <span className="text-base font-semibold">
-                                                        {perfume.rating.toFixed(
-                                                            1
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                        <div className="flex flex-wrap gap-2 mb-4">
+                                        <div className="flex flex-wrap gap-2">
                                             {perfume.gender && (
                                                 <span className="text-xs px-2 py-1 bg-muted rounded-full capitalize">
                                                     {perfume.gender}
@@ -197,50 +183,6 @@ export default function Search() {
                                                     </span>
                                                 )}
                                         </div>
-
-                                        {perfume.notes &&
-                                            typeof perfume.notes === 'object' &&
-                                            Array.isArray(perfume.notes.top) &&
-                                            perfume.notes.top.length > 0 && (
-                                                <div className="mb-4 pb-4 border-b border-border/50">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-sm font-semibold text-accent">
-                                                            Top Notes:
-                                                        </span>
-                                                        {perfume.notes.top
-                                                            .slice(0, 3)
-                                                            .map((note) => (
-                                                                <span
-                                                                    key={`${note}-${index}`}
-                                                                    className="text-sm text-muted-foreground"
-                                                                >
-                                                                    {note}
-                                                                </span>
-                                                            ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                        {Array.isArray(perfume.accords) &&
-                                            perfume.accords.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-auto">
-                                                    {perfume.accords
-                                                        .slice(0, 3)
-                                                        .map(
-                                                            (
-                                                                accord,
-                                                                accordIndex
-                                                            ) => (
-                                                                <span
-                                                                    key={`${accord}-${index}-${accordIndex}`}
-                                                                    className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-full font-medium"
-                                                                >
-                                                                    {accord}
-                                                                </span>
-                                                            )
-                                                        )}
-                                                </div>
-                                            )}
                                     </div>
                                 </article>
                             </Link>
