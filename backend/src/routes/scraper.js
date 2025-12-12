@@ -503,4 +503,127 @@ router.delete('/cache', requireApiKey, (req, res) => {
   res.json({ success: true, message: 'Caché limpiado' });
 });
 
+// GET /api/scrape/incomplete - Get perfumes that need re-scraping
+router.get('/incomplete', requireApiKey, async (req, res, next) => {
+  try {
+    const { limit = 50 } = req.query;
+    const perfumes = await dataStore.getIncomplete({ limit: parseInt(limit) });
+    const count = await dataStore.countIncomplete();
+    
+    res.json({
+      success: true,
+      count,
+      perfumes: perfumes.map(p => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        sourceUrl: p.sourceUrl,
+        hasSillage: !!p.sillage,
+        hasLongevity: !!p.longevity,
+        hasSimilarPerfumes: p.similarPerfumes?.length > 0
+      }))
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
+  }
+});
+
+// POST /api/scrape/rescrape - Re-scrape perfumes to get missing data
+router.post('/rescrape', requireApiKey, async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return next(new ApiError('Array de IDs requerido', 400));
+    }
+    
+    if (ids.length > 20) {
+      return next(new ApiError('Máximo 20 perfumes por batch', 400));
+    }
+    
+    const results = [];
+    const errors = [];
+    
+    for (const id of ids) {
+      try {
+        const perfume = await dataStore.getById(id);
+        
+        if (!perfume || !perfume.sourceUrl) {
+          errors.push({ id, error: 'Perfume not found or no source URL' });
+          continue;
+        }
+        
+        console.log(`🔄 Re-scraping: ${perfume.name} (${id})`);
+        
+        // Clear cache for this URL to force fresh scrape
+        cacheService.del(perfume.sourceUrl);
+        
+        const scrapedData = await scrapePerfume(perfume.sourceUrl);
+        
+        if (scrapedData) {
+          // Update only the new fields
+          await dataStore.update(id, {
+            sillage: scrapedData.sillage,
+            longevity: scrapedData.longevity,
+            projection: scrapedData.projection,
+            similarPerfumes: scrapedData.similarPerfumes,
+            notes: scrapedData.notes,
+            accords: scrapedData.accords,
+            scrapedAt: new Date().toISOString()
+          });
+          
+          results.push({ id, name: perfume.name, success: true });
+        }
+        
+        // Delay between requests
+        await new Promise(resolve => setTimeout(resolve, 15000));
+        
+      } catch (error) {
+        console.error(`❌ Re-scrape failed for ${id}:`, error.message);
+        errors.push({ id, error: error.message });
+      }
+    }
+    
+    res.json({
+      success: true,
+      processed: results.length,
+      failed: errors.length,
+      results,
+      errors
+    });
+    
+  } catch (error) {
+    next(new ApiError(error.message, 500));
+  }
+});
+
+// POST /api/scrape/rescrape/queue - Add incomplete perfumes to re-scrape queue
+router.post('/rescrape/queue', requireApiKey, async (req, res, next) => {
+  try {
+    const { limit = 50 } = req.body;
+    
+    const incompletePerfumes = await dataStore.getIncomplete({ limit: parseInt(limit) });
+    const urls = incompletePerfumes
+      .filter(p => p.sourceUrl)
+      .map(p => p.sourceUrl);
+    
+    if (urls.length === 0) {
+      return res.json({ success: false, message: 'No perfumes to re-scrape' });
+    }
+    
+    // Add to existing queue
+    scrapingQueue.urls.push(...urls);
+    scrapingQueue.total = scrapingQueue.urls.length + scrapingQueue.processed;
+    
+    res.json({
+      success: true,
+      added: urls.length,
+      queueSize: scrapingQueue.urls.length
+    });
+    
+  } catch (error) {
+    next(new ApiError(error.message, 500));
+  }
+});
+
 export default router;

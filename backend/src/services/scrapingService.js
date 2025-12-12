@@ -100,6 +100,10 @@ export const scrapePerfume = async (url) => {
       description: extractDescription($),
       imageUrl: extractImage($),
       rating: extractRating($),
+      sillage: extractSillage($),
+      longevity: extractLongevity($),
+      projection: extractProjection($),
+      similarPerfumes: extractSimilarPerfumes($),
       sourceUrl: url,
       scrapedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -115,7 +119,10 @@ export const scrapePerfume = async (url) => {
         top: perfume.notes?.top?.length || 0,
         heart: perfume.notes?.heart?.length || 0,
         base: perfume.notes?.base?.length || 0
-      }
+      },
+      sillage: perfume.sillage,
+      longevity: perfume.longevity,
+      similarPerfumesCount: perfume.similarPerfumes?.length || 0
     });
     
     // Validate required fields before saving
@@ -511,4 +518,134 @@ function extractRating($) {
   }
   
   return null;
+}
+
+// Extraer sillage (estela)
+function extractSillage($) {
+  // Fragrantica muestra sillage en una barra de votación
+  const sillageSection = $('*:contains("Sillage")').filter(function() {
+    return $(this).text().trim() === 'Sillage' || $(this).text().trim().startsWith('Sillage');
+  }).closest('[class*="cell"]').parent();
+  
+  const votes = {};
+  const labels = ['intimate', 'moderate', 'strong', 'enormous'];
+  
+  sillageSection.find('[style*="width"]').each((i, el) => {
+    const style = $(el).attr('style') || '';
+    const widthMatch = style.match(/width:\s*([\d.]+)%/);
+    if (widthMatch && labels[i]) {
+      votes[labels[i]] = parseFloat(widthMatch[1]);
+    }
+  });
+  
+  // También intentar extraer del texto
+  const bodyText = $('body').text();
+  const sillageMatch = bodyText.match(/sillage[:\s]+(intimate|moderate|strong|enormous)/i);
+  
+  if (Object.keys(votes).length > 0) {
+    // Encontrar el valor más votado
+    const maxVote = Object.entries(votes).reduce((a, b) => a[1] > b[1] ? a : b);
+    return {
+      dominant: maxVote[0],
+      percentage: maxVote[1],
+      votes
+    };
+  }
+  
+  if (sillageMatch) {
+    return { dominant: sillageMatch[1].toLowerCase(), percentage: null, votes: {} };
+  }
+  
+  return null;
+}
+
+// Extraer longevity (duración)
+function extractLongevity($) {
+  const longevitySection = $('*:contains("Longevity")').filter(function() {
+    return $(this).text().trim() === 'Longevity' || $(this).text().trim().startsWith('Longevity');
+  }).closest('[class*="cell"]').parent();
+  
+  const votes = {};
+  const labels = ['very weak', 'weak', 'moderate', 'long lasting', 'eternal'];
+  
+  longevitySection.find('[style*="width"]').each((i, el) => {
+    const style = $(el).attr('style') || '';
+    const widthMatch = style.match(/width:\s*([\d.]+)%/);
+    if (widthMatch && labels[i]) {
+      votes[labels[i]] = parseFloat(widthMatch[1]);
+    }
+  });
+  
+  // También intentar extraer del texto
+  const bodyText = $('body').text();
+  const longevityMatch = bodyText.match(/longevity[:\s]+(very weak|weak|moderate|long lasting|eternal)/i);
+  
+  if (Object.keys(votes).length > 0) {
+    const maxVote = Object.entries(votes).reduce((a, b) => a[1] > b[1] ? a : b);
+    return {
+      dominant: maxVote[0],
+      percentage: maxVote[1],
+      votes
+    };
+  }
+  
+  if (longevityMatch) {
+    return { dominant: longevityMatch[1].toLowerCase(), percentage: null, votes: {} };
+  }
+  
+  return null;
+}
+
+// Extraer projection (proyección) - a menudo igual que sillage en Fragrantica
+function extractProjection($) {
+  // En Fragrantica, projection suele estar combinado con sillage
+  // Buscamos barras de votación específicas
+  const bodyText = $('body').text();
+  const projectionMatch = bodyText.match(/projection[:\s]+(soft|moderate|heavy|enormous)/i);
+  
+  if (projectionMatch) {
+    return projectionMatch[1].toLowerCase();
+  }
+  
+  // Fallback: usar sillage como aproximación
+  return null;
+}
+
+// Extraer perfumes similares
+function extractSimilarPerfumes($) {
+  const similarPerfumes = [];
+  
+  // Fragrantica muestra perfumes similares en una sección específica
+  const similarSection = $('*:contains("This perfume reminds me of")').closest('div').parent();
+  
+  // También buscar en "People who like this also like"
+  const alsoLikeSection = $('*:contains("People who like this also like")').closest('div').parent();
+  
+  // Buscar enlaces a perfumes en ambas secciones
+  [similarSection, alsoLikeSection].forEach(section => {
+    section.find('a[href*="/perfume/"]').each((_, el) => {
+      const $el = $(el);
+      const href = $el.attr('href');
+      const name = $el.text().trim();
+      
+      // Extraer imagen si existe
+      const img = $el.find('img').attr('src') || $el.closest('div').find('img').attr('src');
+      
+      if (name && href && name.length < 100 && !similarPerfumes.some(p => p.name === name)) {
+        let fullUrl = href;
+        if (href.startsWith('/')) {
+          fullUrl = `https://www.fragrantica.com${href}`;
+        }
+        
+        similarPerfumes.push({
+          name: name.replace(/\s+for\s+(men|women|women and men)\s*$/i, '').trim(),
+          url: fullUrl,
+          imageUrl: img ? (img.startsWith('//') ? `https:${img}` : img) : null
+        });
+      }
+    });
+  });
+  
+  // Limitar a 10 perfumes similares
+  return similarPerfumes.slice(0, 10);
 }
