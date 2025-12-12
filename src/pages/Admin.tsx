@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { AdminPerfumeList } from '@/components/admin/AdminPerfumeList';
 import { ScraperPanel } from '@/components/admin/ScraperPanel';
 import { SitemapImporter } from '@/components/admin/SitemapImporter';
+import { RescrapePanel } from '@/components/admin/RescrapePanel';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2, RefreshCw } from 'lucide-react';
@@ -130,7 +131,7 @@ export default function Admin() {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -142,6 +143,10 @@ export default function Admin() {
             <TabsTrigger value="import" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Import</span>
+            </TabsTrigger>
+            <TabsTrigger value="rescrape" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Re-Scrape</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -159,6 +164,10 @@ export default function Admin() {
 
           <TabsContent value="import" className="animate-fade-in">
             <SitemapImporter />
+          </TabsContent>
+
+          <TabsContent value="rescrape" className="animate-fade-in">
+            <RescrapePanel />
           </TabsContent>
 
           <TabsContent value="stats" className="animate-fade-in">

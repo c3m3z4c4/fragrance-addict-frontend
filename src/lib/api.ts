@@ -23,6 +23,22 @@ export interface APIPerfume {
   description?: string;
   imageUrl?: string;
   rating?: number;
+  sillage?: {
+    dominant?: string;
+    percentage?: number;
+    votes?: Record<string, number>;
+  };
+  longevity?: {
+    dominant?: string;
+    percentage?: number;
+    votes?: Record<string, number>;
+  };
+  projection?: string;
+  similarPerfumes?: Array<{
+    name: string;
+    url: string;
+    imageUrl?: string;
+  }>;
   sourceUrl?: string;
 }
 
@@ -300,5 +316,78 @@ export async function clearQueue(): Promise<{ success: boolean }> {
   });
   
   if (!response.ok) throw new Error('Failed to clear queue');
+  return response.json();
+}
+
+// ============= RE-SCRAPE FUNCTIONS =============
+
+export interface IncompletePerfume {
+  id: string;
+  name: string;
+  brand: string;
+  sourceUrl: string;
+  hasSillage: boolean;
+  hasLongevity: boolean;
+  hasSimilarPerfumes: boolean;
+}
+
+// Get incomplete perfumes that need re-scraping
+export async function getIncompletePerfumes(limit = 50): Promise<{ success: boolean; count?: number; perfumes?: IncompletePerfume[]; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/incomplete?limit=${limit}`, {
+    headers: {
+      'x-api-key': getApiKey(),
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to get incomplete perfumes' }));
+    return { success: false, error: error.error || 'Failed to get incomplete perfumes' };
+  }
+  
+  return response.json();
+}
+
+// Re-scrape specific perfumes by ID
+export async function rescrapePerfumes(ids: string[]): Promise<{ 
+  success: boolean; 
+  processed?: number; 
+  failed?: number; 
+  results?: Array<{ id: string; name: string; success: boolean }>;
+  errors?: Array<{ id: string; error: string }>;
+  error?: string 
+}> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/rescrape`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ ids }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Re-scrape failed' }));
+    return { success: false, error: error.error || 'Re-scrape failed' };
+  }
+  
+  return response.json();
+}
+
+// Add incomplete perfumes to re-scrape queue
+export async function addIncompleteToQueue(limit = 50): Promise<{ success: boolean; added?: number; queueSize?: number; message?: string; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/rescrape/queue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ limit }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to add to queue' }));
+    return { success: false, error: error.error || 'Failed to add to queue' };
+  }
+  
   return response.json();
 }
