@@ -275,22 +275,47 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
 // Get perfume by ID
 export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
     try {
+        console.log('🔍 Fetching perfume by ID:', id);
         const response = await fetch(`${API_BASE_URL}/api/perfumes/${id}`);
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
-            console.error('Perfume not found:', id);
+            console.error('Perfume not found:', id, response.status);
             return null;
         }
         const data = await response.json();
+        console.log('Raw perfume data:', data);
 
         // Handle both response formats
         let perfume: any = null;
         if (data.data && typeof data.data === 'object') {
+            console.log('Using data.data format');
             perfume = data.data;
-        } else if (data && typeof data === 'object' && !data.success) {
+        } else if (data && typeof data === 'object' && data.id) {
+            console.log('Using direct object format');
             perfume = data;
+        } else if (data && typeof data === 'object' && !data.success) {
+            console.log('Using fallback object format');
+            perfume = data;
+        } else {
+            console.warn('❌ Could not extract perfume from response');
+            console.log(
+                'Data type:',
+                typeof data,
+                'Keys:',
+                Object.keys(data || {})
+            );
+            return null;
         }
 
-        return perfume ? deepSanitizePerfume(perfume) : null;
+        if (!perfume || !perfume.id || !perfume.name) {
+            console.warn('❌ Perfume missing required fields');
+            return null;
+        }
+
+        const sanitized = deepSanitizePerfume(perfume);
+        console.log('✅ Sanitized perfume:', sanitized.id, sanitized.name);
+        return sanitized;
     } catch (error) {
         console.error('❌ Fetch perfume by ID error:', error);
         return null;
