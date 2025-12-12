@@ -80,7 +80,9 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
 
 // ============= ADMIN FUNCTIONS (Protected) =============
 
-const getApiKey = () => import.meta.env.VITE_ADMIN_API_KEY || '';
+import { getStoredApiKey } from '@/hooks/useAdminApiKey';
+
+const getApiKey = () => getStoredApiKey();
 
 // Scrape a perfume from URL
 export async function scrapePerfume(url: string, save = true): Promise<{ success: boolean; data?: APIPerfume; error?: string }> {
