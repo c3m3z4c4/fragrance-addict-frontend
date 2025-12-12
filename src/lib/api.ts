@@ -128,21 +128,54 @@ export async function fetchPerfumes(
 
 // Search perfumes by query
 export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
-    const response = await fetch(
-        `${API_BASE_URL}/api/perfumes/search?q=${encodeURIComponent(query)}`
-    );
-    if (!response.ok) throw new Error('Failed to search perfumes');
-    const data = await response.json();
+    try {
+        console.log('🔍 Searching for:', query);
+        console.log(
+            '📍 API URL:',
+            `${API_BASE_URL}/api/perfumes/search?q=${encodeURIComponent(query)}`
+        );
 
-    // Handle both response formats
-    if (data.data) {
-        return data.data;
-    } else if (data.perfumes) {
-        return data.perfumes;
-    } else if (Array.isArray(data)) {
-        return data;
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumes/search?q=${encodeURIComponent(query)}`
+        );
+
+        console.log('Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+            throw new Error(
+                `Search failed: ${response.status} ${response.statusText}`
+            );
+        }
+
+        const data = await response.json();
+        console.log('Raw response data:', data);
+
+        // Handle both response formats
+        if (data.data) {
+            console.log(
+                '✅ Returning data.data with',
+                data.data.length,
+                'results'
+            );
+            return data.data;
+        } else if (data.perfumes) {
+            console.log(
+                '✅ Returning data.perfumes with',
+                data.perfumes.length,
+                'results'
+            );
+            return data.perfumes;
+        } else if (Array.isArray(data)) {
+            console.log('✅ Returning array data with', data.length, 'results');
+            return data;
+        }
+
+        console.warn('❌ No valid data format found');
+        return [];
+    } catch (error) {
+        console.error('❌ Search error:', error);
+        throw error;
     }
-    return [];
 }
 
 // Get perfume by ID
