@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { searchPerfumes, type APIPerfume } from '@/lib/api';
+import {
+    searchPerfumes,
+    fetchPerfumes,
+    fetchPerfumeById,
+    type APIPerfume,
+} from '@/lib/api';
 
 export function usePerfumeSearch(query: string) {
     const isEnabled = query.length >= 2;

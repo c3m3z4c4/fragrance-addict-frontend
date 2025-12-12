@@ -201,12 +201,17 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
             results = [];
         }
 
-        // Validate that results are proper APIPerfume objects
+        // Validate that results are proper APIPerfume objects with required fields
         const validated = results.filter(
-            (item) => item && typeof item === 'object'
+            (item) =>
+                item &&
+                typeof item === 'object' &&
+                (item as any).id &&
+                (item as any).name &&
+                (item as any).brand
         );
         console.log('✅ Validated', validated.length, 'perfumes');
-        return validated;
+        return validated as APIPerfume[];
     } catch (error) {
         console.error('❌ Search error:', error);
         // Return empty array instead of throwing to prevent React crashes
