@@ -149,6 +149,61 @@ export async function fetchPerfumes(
     }
 }
 
+// Ensure all complex properties are converted to primitives
+function deepSanitizePerfume(item: any): APIPerfume {
+    if (!item) return null as any;
+
+    // Sanitize accords - MUST be string[]
+    if (item.accords && Array.isArray(item.accords)) {
+        item.accords = item.accords
+            .map((accord: any) => {
+                if (typeof accord === 'string') return accord;
+                if (accord && typeof accord === 'object' && accord.name) {
+                    return String(accord.name).trim();
+                }
+                if (accord && typeof accord === 'object' && accord.color) {
+                    return 'accent'; // Fallback
+                }
+                return String(accord).trim();
+            })
+            .filter(Boolean);
+    } else {
+        item.accords = [];
+    }
+
+    // Sanitize notes - MUST be string[]
+    if (item.notes && typeof item.notes === 'object') {
+        ['top', 'heart', 'base'].forEach((level) => {
+            if (item.notes[level] && Array.isArray(item.notes[level])) {
+                item.notes[level] = item.notes[level]
+                    .map((note: any) => {
+                        if (typeof note === 'string') return note;
+                        if (note && typeof note === 'object' && note.name) {
+                            return String(note.name).trim();
+                        }
+                        return String(note).trim();
+                    })
+                    .filter(Boolean);
+            } else {
+                item.notes[level] = [];
+            }
+        });
+    } else {
+        item.notes = { top: [], heart: [], base: [] };
+    }
+
+    // Ensure primitives
+    item.id = String(item.id || '').trim();
+    item.name = String(item.name || '').trim();
+    item.brand = String(item.brand || '').trim();
+    item.gender = item.gender || undefined;
+    item.concentration = item.concentration || undefined;
+    item.year = Number(item.year) || undefined;
+    item.rating = Number(item.rating) || undefined;
+
+    return item as APIPerfume;
+}
+
 // Search perfumes by query
 export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
     try {
@@ -201,7 +256,7 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
             results = [];
         }
 
-        // Validate and sanitize results
+        // Validate and sanitize results using deepSanitizePerfume
         const validated = results
             .filter(
                 (item) =>
@@ -211,55 +266,7 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
                     (item as any).name &&
                     (item as any).brand
             )
-            .map((item: any) => {
-                // Sanitize accords: convert objects to strings if needed
-                if (item.accords && Array.isArray(item.accords)) {
-                    item.accords = item.accords.map((accord: any) => {
-                        if (typeof accord === 'string') return accord;
-                        if (
-                            accord &&
-                            typeof accord === 'object' &&
-                            accord.name
-                        ) {
-                            return accord.name;
-                        }
-                        return String(accord);
-                    });
-                }
-
-                // Sanitize notes: ensure they're strings
-                if (item.notes && typeof item.notes === 'object') {
-                    if (item.notes.top && Array.isArray(item.notes.top)) {
-                        item.notes.top = item.notes.top.map((note: any) => {
-                            if (typeof note === 'string') return note;
-                            if (note && typeof note === 'object' && note.name) {
-                                return note.name;
-                            }
-                            return String(note);
-                        });
-                    }
-                    if (item.notes.heart && Array.isArray(item.notes.heart)) {
-                        item.notes.heart = item.notes.heart.map((note: any) => {
-                            if (typeof note === 'string') return note;
-                            if (note && typeof note === 'object' && note.name) {
-                                return note.name;
-                            }
-                            return String(note);
-                        });
-                    }
-                    if (item.notes.base && Array.isArray(item.notes.base)) {
-                        item.notes.base = item.notes.base.map((note: any) => {
-                            if (typeof note === 'string') return note;
-                            if (note && typeof note === 'object' && note.name) {
-                                return note.name;
-                            }
-                            return String(note);
-                        });
-                    }
-                }
-
-                return item;
-            });
+            .map((item: any) => deepSanitizePerfume(item));
         console.log('✅ Validated and sanitized', validated.length, 'perfumes');
         return validated as APIPerfume[];
     } catch (error) {
