@@ -10,6 +10,7 @@ export default function Search() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
 
+    // ALWAYS call hooks first, unconditionally
     const {
         data: perfumes = [],
         isLoading,
@@ -24,7 +25,7 @@ export default function Search() {
         error,
     });
 
-    // Early return if no query
+    // Early return AFTER all hooks have been called
     if (!query) {
         return (
             <div className="min-h-screen flex flex-col">
