@@ -6,7 +6,7 @@ import { ScraperPanel } from '@/components/admin/ScraperPanel';
 import { SitemapImporter } from '@/components/admin/SitemapImporter';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2, RefreshCw } from 'lucide-react';
 import { useAdminApiKey } from '@/hooks/useAdminApiKey';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,16 +20,17 @@ export default function Admin() {
   const [inputKey, setInputKey] = useState(apiKey);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/health`, { method: 'GET' });
-        setBackendStatus(response.ok ? 'online' : 'offline');
-      } catch {
-        setBackendStatus('offline');
-      }
-    };
+  const checkBackend = async () => {
+    setBackendStatus('checking');
+    try {
+      const response = await fetch(`${API_BASE}/health`, { method: 'GET' });
+      setBackendStatus(response.ok ? 'online' : 'offline');
+    } catch {
+      setBackendStatus('offline');
+    }
+  };
 
+  useEffect(() => {
     checkBackend();
     const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
@@ -92,6 +93,15 @@ export default function Admin() {
                     Backend Offline
                   </span>
                 )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7" 
+                  onClick={checkBackend}
+                  disabled={backendStatus === 'checking'}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </div>
             <CardDescription>
