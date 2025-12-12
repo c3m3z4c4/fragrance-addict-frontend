@@ -101,7 +101,29 @@ export async function fetchPerfumes(
         `${API_BASE_URL}/api/perfumes?page=${page}&limit=${limit}`
     );
     if (!response.ok) throw new Error('Failed to fetch perfumes');
-    return response.json();
+    const data = await response.json();
+
+    // Handle both response formats
+    if (data.data && data.pagination) {
+        // New format from backend: { success, data, pagination }
+        return {
+            perfumes: data.data,
+            total: data.pagination.total,
+            page: data.pagination.page,
+            limit: data.pagination.limit,
+        };
+    } else if (data.perfumes) {
+        // Old format: { perfumes, total, page, limit }
+        return data;
+    } else {
+        // Direct array response
+        return {
+            perfumes: Array.isArray(data) ? data : [],
+            total: data.total || 0,
+            page,
+            limit,
+        };
+    }
 }
 
 // Search perfumes by query
@@ -111,14 +133,29 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
     );
     if (!response.ok) throw new Error('Failed to search perfumes');
     const data = await response.json();
-    return data.perfumes || data;
+
+    // Handle both response formats
+    if (data.data) {
+        return data.data;
+    } else if (data.perfumes) {
+        return data.perfumes;
+    } else if (Array.isArray(data)) {
+        return data;
+    }
+    return [];
 }
 
 // Get perfume by ID
 export async function fetchPerfumeById(id: string): Promise<APIPerfume> {
     const response = await fetch(`${API_BASE_URL}/api/perfumes/${id}`);
     if (!response.ok) throw new Error('Perfume not found');
-    return response.json();
+    const data = await response.json();
+
+    // Handle both response formats
+    if (data.data) {
+        return data.data;
+    }
+    return data;
 }
 
 // Get perfumes by brand
@@ -130,7 +167,14 @@ export async function fetchPerfumesByBrand(
     );
     if (!response.ok) throw new Error('Failed to fetch brand perfumes');
     const data = await response.json();
-    return data.perfumes || data;
+
+    // Handle both response formats
+    if (data.data) {
+        return data.data;
+    } else if (data.perfumes) {
+        return data.perfumes;
+    }
+    return Array.isArray(data) ? data : [];
 }
 
 // Get all brands
@@ -138,14 +182,27 @@ export async function fetchBrands(): Promise<string[]> {
     const response = await fetch(`${API_BASE_URL}/api/perfumes/brands`);
     if (!response.ok) throw new Error('Failed to fetch brands');
     const data = await response.json();
-    return data.brands || data;
+
+    // Handle both response formats
+    if (data.data) {
+        return data.data;
+    } else if (data.brands) {
+        return data.brands;
+    }
+    return Array.isArray(data) ? data : [];
 }
 
 // Get statistics
 export async function fetchStats(): Promise<{ total: number; brands: number }> {
     const response = await fetch(`${API_BASE_URL}/api/perfumes/stats`);
     if (!response.ok) throw new Error('Failed to fetch stats');
-    return response.json();
+    const data = await response.json();
+
+    // Handle both response formats
+    if (data.data) {
+        return data.data;
+    }
+    return data;
 }
 
 // ============= ADMIN FUNCTIONS (Protected) =============
