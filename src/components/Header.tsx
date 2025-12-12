@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Heart, Search, Menu, X } from 'lucide-react';
+import { Heart, Search, Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useAdminApiKey } from '@/hooks/useAdminApiKey';
+import { useAuth } from '@/contexts/AuthContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +15,7 @@ interface HeaderProps {
 export function Header({ onSearchClick }: HeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { favoritesCount } = useFavorites();
-  const { isConfigured: isAdmin } = useAdminApiKey();
+  const { isAdmin, logout } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
 
@@ -87,6 +87,25 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
               </Button>
             </Link>
 
+            {/* Auth Button */}
+            {isAdmin ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                className="hover:text-accent hidden md:flex"
+                title={t('login.logout')}
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            ) : (
+              <Link to="/login" className="hidden md:block">
+                <Button variant="ghost" size="icon" className="hover:text-accent">
+                  <LogIn className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
+
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -115,6 +134,26 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                 {link.label}
               </Link>
             ))}
+            {/* Mobile Auth Link */}
+            {isAdmin ? (
+              <button
+                onClick={() => {
+                  logout();
+                  setIsMenuOpen(false);
+                }}
+                className="block py-3 text-sm font-medium tracking-wide text-foreground/70 transition-colors hover:text-accent"
+              >
+                {t('login.logout')}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="block py-3 text-sm font-medium tracking-wide text-foreground/70 transition-colors hover:text-accent"
+              >
+                {t('login.title')}
+              </Link>
+            )}
           </nav>
         )}
       </div>
