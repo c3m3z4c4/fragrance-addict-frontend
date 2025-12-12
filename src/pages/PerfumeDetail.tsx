@@ -1,9 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Heart, Share2, Star } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { NotesPyramidVisual } from '@/components/NotesPyramidVisual';
-import { SimilarPerfumes } from '@/components/SimilarPerfumes';
+import { PerformanceMetrics } from '@/components/PerformanceMetrics';
+import { SimilarPerfumesSection } from '@/components/SimilarPerfumesSection';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -14,6 +16,7 @@ import { toast } from '@/hooks/use-toast';
 const PerfumeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { toggleFavorite, isFavorite } = useFavorites();
 
   const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
@@ -34,10 +37,16 @@ const PerfumeDetail = () => {
     } else {
       await navigator.clipboard.writeText(window.location.href);
       toast({
-        title: "Link copied",
-        description: "The perfume link has been copied to your clipboard.",
+        title: t('perfume.linkCopied'),
+        description: t('perfume.linkCopiedDesc'),
       });
     }
+  };
+
+  const getGenderLabel = (gender?: string) => {
+    if (!gender) return '';
+    const genderKey = gender.toLowerCase() as 'masculine' | 'feminine' | 'unisex';
+    return t(`perfume.${genderKey}`, { defaultValue: gender });
   };
 
   if (isLoading) {
@@ -68,8 +77,8 @@ const PerfumeDetail = () => {
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="font-display text-2xl mb-4">Perfume not found</h1>
-            <Link to="/" className="text-accent hover:underline">Return to search</Link>
+            <h1 className="font-display text-2xl mb-4">{t('perfume.notFound')}</h1>
+            <Link to="/" className="text-accent hover:underline">{t('perfume.returnToSearch')}</Link>
           </div>
         </div>
         <Footer />
@@ -89,7 +98,7 @@ const PerfumeDetail = () => {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            {t('common.back')}
           </button>
         </div>
 
@@ -118,10 +127,10 @@ const PerfumeDetail = () => {
                   onClick={() => {
                     toggleFavorite(perfume.id);
                     toast({
-                      title: favorite ? "Removed from favorites" : "Added to favorites",
+                      title: favorite ? t('perfume.removedFromFavorites') : t('perfume.addedToFavorites'),
                       description: favorite
-                        ? `${perfume.name} has been removed from your favorites`
-                        : `${perfume.name} has been added to your favorites`,
+                        ? `${perfume.name} ${t('perfume.removedFromFavorites').toLowerCase()}`
+                        : `${perfume.name} ${t('perfume.addedToFavorites').toLowerCase()}`,
                     });
                   }}
                 >
@@ -177,25 +186,25 @@ const PerfumeDetail = () => {
               <div className="grid grid-cols-2 gap-4 mb-8 py-6 border-y border-border">
                 {perfume.perfumer && (
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Perfumer</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.perfumer')}</p>
                     <p className="font-medium">{perfume.perfumer}</p>
                   </div>
                 )}
                 {perfume.year && (
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Year</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.year')}</p>
                     <p className="font-medium">{perfume.year}</p>
                   </div>
                 )}
                 {perfume.gender && (
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Gender</p>
-                    <p className="font-medium capitalize">{perfume.gender}</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.gender')}</p>
+                    <p className="font-medium">{getGenderLabel(perfume.gender)}</p>
                   </div>
                 )}
                 {perfume.concentration && (
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Concentration</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.concentration')}</p>
                     <p className="font-medium">{perfume.concentration}</p>
                   </div>
                 )}
@@ -204,7 +213,7 @@ const PerfumeDetail = () => {
               {/* Accords */}
               {perfume.accords && perfume.accords.length > 0 && (
                 <div className="mb-8">
-                  <h2 className="font-display text-lg mb-4">Main Accords</h2>
+                  <h2 className="font-display text-lg mb-4">{t('perfume.mainAccords')}</h2>
                   <div className="flex flex-wrap gap-2">
                     {perfume.accords.map((accord, index) => (
                       <span
@@ -222,7 +231,7 @@ const PerfumeDetail = () => {
               {/* Description */}
               {perfume.description && (
                 <div className="mb-8">
-                  <h2 className="font-display text-lg mb-3">About this fragrance</h2>
+                  <h2 className="font-display text-lg mb-3">{t('perfume.aboutFragrance')}</h2>
                   <p className="text-muted-foreground leading-relaxed">
                     {perfume.description}
                   </p>
@@ -234,6 +243,13 @@ const PerfumeDetail = () => {
                 <NotesPyramidVisual notes={perfume.notes} />
               )}
 
+              {/* Performance Metrics */}
+              <PerformanceMetrics 
+                sillage={perfume.sillage}
+                longevity={perfume.longevity}
+                projection={perfume.projection}
+              />
+
               {/* Source link */}
               {perfume.sourceUrl && (
                 <div className="mt-8 pt-6 border-t border-border">
@@ -243,7 +259,7 @@ const PerfumeDetail = () => {
                     rel="noopener noreferrer"
                     className="text-sm text-muted-foreground hover:text-accent transition-colors"
                   >
-                    View original source →
+                    {t('perfume.viewSource')} →
                   </a>
                 </div>
               )}
@@ -252,9 +268,12 @@ const PerfumeDetail = () => {
         </section>
 
         {/* Similar Perfumes */}
-        {similarPerfumes.length > 0 && (
+        {(similarPerfumes.length > 0 || (perfume.similarPerfumes && perfume.similarPerfumes.length > 0)) && (
           <section className="container mx-auto px-4 py-12 border-t border-border">
-            <SimilarPerfumes perfumes={similarPerfumes} />
+            <SimilarPerfumesSection 
+              similarFromDatabase={similarPerfumes}
+              similarExternal={perfume.similarPerfumes}
+            />
           </section>
         )}
       </main>

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Heart, Search, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useAdminApiKey } from '@/hooks/useAdminApiKey';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
@@ -12,14 +15,16 @@ interface HeaderProps {
 export function Header({ onSearchClick }: HeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { favoritesCount } = useFavorites();
+  const { isConfigured: isAdmin } = useAdminApiKey();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/favorites', label: 'Favorites' },
-    { href: '/brands', label: 'Brands' },
-    { href: '/about', label: 'About' },
-    { href: '/admin', label: 'Admin' },
+    { href: '/', label: t('nav.home') },
+    { href: '/favorites', label: t('nav.favorites') },
+    { href: '/brands', label: t('nav.brands') },
+    { href: '/about', label: t('nav.about') },
+    ...(isAdmin ? [{ href: '/admin', label: t('nav.admin') }] : []),
   ];
 
   return (
@@ -52,6 +57,8 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
 
           {/* Actions */}
           <div className="flex items-center gap-2 md:gap-4">
+            <LanguageSelector />
+            
             {onSearchClick ? (
               <Button
                 variant="ghost"

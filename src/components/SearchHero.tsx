@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
@@ -9,6 +10,7 @@ export function SearchHero() {
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { data: results, isLoading } = usePerfumeSearch(query);
   const showResults = isFocused && query.length >= 2;
@@ -46,10 +48,10 @@ export function SearchHero() {
       <div className="container mx-auto px-4 relative">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-medium mb-6 animate-fade-in">
-            Discover Your <span className="italic text-accent">Signature</span> Scent
+            {t('search.title')} <span className="italic text-accent">{t('search.titleHighlight')}</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-10 opacity-0 animate-fade-in animation-delay-100">
-            Explore detailed information about your favorite fragrances
+            {t('search.subtitle')}
           </p>
 
           {/* Search Bar */}
@@ -68,7 +70,7 @@ export function SearchHero() {
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                placeholder="Search by perfume name, brand, or notes..."
+                placeholder={t('search.placeholder')}
                 className="w-full py-4 pl-12 pr-12 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none font-body"
               />
               {query && (
@@ -121,13 +123,13 @@ export function SearchHero() {
                         type="submit"
                         className="w-full py-3 text-center text-sm text-accent hover:bg-muted/50 border-t border-border transition-colors"
                       >
-                        View all {results.length} results →
+                        {results.length} {t('search.results')} →
                       </button>
                     )}
                   </>
                 ) : (
                   <div className="py-8 text-center text-muted-foreground">
-                    No perfumes found for "{query}"
+                    {t('common.notFound')} "{query}"
                   </div>
                 )}
               </div>
@@ -136,7 +138,7 @@ export function SearchHero() {
 
           {/* Search hints */}
           <div className="mt-6 flex flex-wrap justify-center gap-2 opacity-0 animate-fade-in animation-delay-300">
-            <span className="text-sm text-muted-foreground">Try:</span>
+            <span className="text-sm text-muted-foreground">{t('search.trending')}:</span>
             {['Dior Sauvage', 'Vanilla', 'Oud', 'Chanel'].map((hint) => (
               <button
                 key={hint}
