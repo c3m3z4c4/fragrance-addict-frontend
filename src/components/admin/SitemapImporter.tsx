@@ -79,6 +79,11 @@ export function SitemapImporter() {
         throw new Error(result.error || 'Failed to fetch URLs');
       }
       
+      // Check if we got any URLs
+      if (result.urls.length === 0) {
+        throw new Error('No URLs found. Try a different brand name or check spelling.');
+      }
+      
       setFetchedUrls(result.urls);
       
       // Then check which ones already exist
@@ -390,11 +395,11 @@ export function SitemapImporter() {
           <CardTitle className="text-base">Important Notes</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>• Scraping respects a 5-second delay between requests</p>
-          <p>• Processing 100 perfumes takes approximately 8-10 minutes</p>
+          <p>• Scraping respects a 15-second delay between requests</p>
+          <p>• Processing 100 perfumes takes approximately 25-30 minutes</p>
           <p>• The queue runs in the backend - you can close this page</p>
           <p>• Duplicates are automatically skipped</p>
-          <p>• Popular brands: Dior, Chanel, Tom Ford, Creed, Parfums de Marly</p>
+          <p>• Brand names must match exactly (e.g., "Dior" not "dior")</p>
         </CardContent>
       </Card>
     </div>
