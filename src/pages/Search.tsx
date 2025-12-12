@@ -199,7 +199,8 @@ export default function Search() {
                                         </div>
 
                                         {perfume.notes &&
-                                            perfume.notes.top &&
+                                            typeof perfume.notes === 'object' &&
+                                            Array.isArray(perfume.notes.top) &&
                                             perfume.notes.top.length > 0 && (
                                                 <div className="mb-4 pb-4 border-b border-border/50">
                                                     <div className="flex items-center gap-2 flex-wrap">
@@ -210,7 +211,7 @@ export default function Search() {
                                                             .slice(0, 3)
                                                             .map((note) => (
                                                                 <span
-                                                                    key={note}
+                                                                    key={`${note}-${index}`}
                                                                     className="text-sm text-muted-foreground"
                                                                 >
                                                                     {note}
@@ -220,19 +221,24 @@ export default function Search() {
                                                 </div>
                                             )}
 
-                                        {perfume.accords &&
+                                        {Array.isArray(perfume.accords) &&
                                             perfume.accords.length > 0 && (
                                                 <div className="flex flex-wrap gap-2 mt-auto">
                                                     {perfume.accords
                                                         .slice(0, 3)
-                                                        .map((accord) => (
-                                                            <span
-                                                                key={accord}
-                                                                className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-full font-medium"
-                                                            >
-                                                                {accord}
-                                                            </span>
-                                                        ))}
+                                                        .map(
+                                                            (
+                                                                accord,
+                                                                accordIndex
+                                                            ) => (
+                                                                <span
+                                                                    key={`${accord}-${index}-${accordIndex}`}
+                                                                    className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-full font-medium"
+                                                                >
+                                                                    {accord}
+                                                                </span>
+                                                            )
+                                                        )}
                                                 </div>
                                             )}
                                     </div>
