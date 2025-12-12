@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdminPerfumeList } from '@/components/admin/AdminPerfumeList';
@@ -6,16 +6,34 @@ import { ScraperPanel } from '@/components/admin/ScraperPanel';
 import { SitemapImporter } from '@/components/admin/SitemapImporter';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Key, Check, X } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { useAdminApiKey } from '@/hooks/useAdminApiKey';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('perfumes');
   const { apiKey, saveApiKey, clearApiKey, isConfigured } = useAdminApiKey();
   const [inputKey, setInputKey] = useState(apiKey);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/health`, { method: 'GET' });
+        setBackendStatus(response.ok ? 'online' : 'offline');
+      } catch {
+        setBackendStatus('offline');
+      }
+    };
+
+    checkBackend();
+    const interval = setInterval(checkBackend, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSaveKey = () => {
     if (inputKey.trim()) {
@@ -51,6 +69,27 @@ export default function Admin() {
                 ) : (
                   <span className="flex items-center gap-1 text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
                     <X className="h-3 w-3" /> Not configured
+                  </span>
+                )}
+              </div>
+              {/* Backend Status Indicator */}
+              <div className="flex items-center gap-2">
+                {backendStatus === 'checking' && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking...
+                  </span>
+                )}
+                {backendStatus === 'online' && (
+                  <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-1 rounded-full">
+                    <Wifi className="h-3 w-3" />
+                    Backend Online
+                  </span>
+                )}
+                {backendStatus === 'offline' && (
+                  <span className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-2.5 py-1 rounded-full">
+                    <WifiOff className="h-3 w-3" />
+                    Backend Offline
                   </span>
                 )}
               </div>
