@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface NotesPyramidVisualProps {
@@ -10,6 +11,7 @@ interface NotesPyramidVisualProps {
 }
 
 export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps) {
+  const { t } = useTranslation();
   const topNotes = notes?.top || [];
   const heartNotes = notes?.heart || [];
   const baseNotes = notes?.base || [];
@@ -20,7 +22,7 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
 
   return (
     <div className={cn("space-y-6", className)}>
-      <h3 className="font-display text-2xl font-medium">Fragrance Notes</h3>
+      <h3 className="font-display text-2xl font-medium">{t('notes.topNotes').split(' ')[0]} {t('notes.topNotes').includes('Notes') ? 'Notes' : ''}</h3>
       
       <div className="relative">
         {/* Pyramid visualization */}
@@ -31,8 +33,8 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-8 rounded-full bg-gradient-to-b from-accent to-accent/50" />
                 <div>
-                  <p className="text-sm uppercase tracking-wider text-accent font-medium">Top Notes</p>
-                  <p className="text-xs text-muted-foreground">First impression (0-30 min)</p>
+                  <p className="text-sm uppercase tracking-wider text-accent font-medium">{t('notes.topNotes')}</p>
+                  <p className="text-xs text-muted-foreground">(0-30 min)</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 pl-4">
@@ -55,8 +57,8 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-8 rounded-full bg-gradient-to-b from-gold to-gold/50" />
                 <div>
-                  <p className="text-sm uppercase tracking-wider text-gold font-medium">Heart Notes</p>
-                  <p className="text-xs text-muted-foreground">The core (30 min - 4 hrs)</p>
+                  <p className="text-sm uppercase tracking-wider text-gold font-medium">{t('notes.heartNotes')}</p>
+                  <p className="text-xs text-muted-foreground">(30 min - 4 hrs)</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 pl-4">
@@ -79,8 +81,8 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-8 rounded-full bg-gradient-to-b from-amber to-amber/50" />
                 <div>
-                  <p className="text-sm uppercase tracking-wider text-amber font-medium">Base Notes</p>
-                  <p className="text-xs text-muted-foreground">The foundation (4+ hrs)</p>
+                  <p className="text-sm uppercase tracking-wider text-amber font-medium">{t('notes.baseNotes')}</p>
+                  <p className="text-xs text-muted-foreground">(4+ hrs)</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 pl-4">
