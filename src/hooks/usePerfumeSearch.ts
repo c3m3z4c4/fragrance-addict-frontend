@@ -7,16 +7,35 @@ import {
 } from '@/lib/api';
 
 export function usePerfumeSearch(query: string) {
-    return useQuery({
-        queryKey: ['perfumes', 'search', query],
-        queryFn: () => searchPerfumes(query),
-        enabled: query.length >= 2,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        retry: 2,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    });
-}
+    console.log('🎣 usePerfumeSearch called with query:', query);
 
+    const result = useQuery({
+        queryKey: ['perfumes', 'search', query],
+        queryFn: () => {
+            console.log('📡 queryFn executing for query:', query);
+            return searchPerfumes(query);
+        },
+        enabled: query.length >= 2,
+        staleTime: 1000 * 60 * 5,
+        retry: 1,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        placeholderData: [],
+    });
+
+    console.log('🎣 usePerfumeSearch returning:', {
+        enabled: query.length >= 2,
+        status: result.status,
+        dataType: typeof result.data,
+        dataIsArray: Array.isArray(result.data),
+        dataLength: Array.isArray(result.data) ? result.data.length : 'N/A',
+    });
+
+    // Ensure data is always an array
+    return {
+        ...result,
+        data: Array.isArray(result.data) ? result.data : [],
+    } as typeof result;
+}
 export function usePerfumes(page = 1, limit = 20) {
     return useQuery({
         queryKey: ['perfumes', 'list', page, limit],

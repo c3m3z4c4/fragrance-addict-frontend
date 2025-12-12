@@ -11,11 +11,22 @@ import Favorites from './pages/Favorites';
 import Brands from './pages/Brands';
 import About from './pages/About';
 import Search from './pages/Search';
+import { SearchDebug } from './pages/SearchDebug';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1000 * 60 * 5, // 5 minutes
+            gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
+            retry: 1,
+            retryDelay: (attemptIndex) =>
+                Math.min(1000 * 2 ** attemptIndex, 30000),
+        },
+    },
+});
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -41,6 +52,7 @@ function AppRoutes() {
         <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/search" element={<Search />} />
+            <Route path="/search-debug" element={<SearchDebug />} />
             <Route path="/perfume/:id" element={<PerfumeDetail />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/brands" element={<Brands />} />
