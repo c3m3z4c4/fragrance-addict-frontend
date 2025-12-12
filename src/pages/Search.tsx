@@ -1,4 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
+import { useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
@@ -10,10 +11,22 @@ export default function Search() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
 
-    const { data: perfumes, isLoading, error } = usePerfumeSearch(query);
+    // Only call hook if query is valid length
+    const shouldSearch = query.length >= 2;
+    const {
+        data: perfumes,
+        isLoading,
+        error,
+    } = usePerfumeSearch(shouldSearch ? query : '');
 
-    // Show empty state if no query
-    if (!query) {
+    // Memoize perfume list to prevent re-renders
+    const perfumeList = useMemo(() => {
+        if (!perfumes || !Array.isArray(perfumes)) return [];
+        return perfumes.filter((p) => p && p.id);
+    }, [perfumes]);
+
+    // Empty/invalid query
+    if (!shouldSearch) {
         return (
             <div className="min-h-screen flex flex-col">
                 <Header />
@@ -23,7 +36,7 @@ export default function Search() {
                             No search query
                         </p>
                         <p className="text-sm text-muted-foreground/70">
-                            Enter a search term to find fragrances
+                            Enter at least 2 characters to search
                         </p>
                         <Link to="/">
                             <Button className="mt-6">Back to Home</Button>
@@ -35,17 +48,17 @@ export default function Search() {
         );
     }
 
-    // Show loading state
+    // Loading
     if (isLoading) {
         return (
             <div className="min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <h1 className="font-display text-3xl md:text-4xl font-medium mb-8">
-                        Searching for "{query}"
+                        Searching...
                     </h1>
                     <div className="grid gap-6">
-                        {[...Array(4)].map((_, i) => (
+                        {Array.from({ length: 4 }).map((_, i) => (
                             <div
                                 key={i}
                                 className="flex gap-6 p-6 border border-border rounded-lg"
@@ -65,7 +78,7 @@ export default function Search() {
         );
     }
 
-    // Show error state
+    // Error
     if (error) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -78,7 +91,7 @@ export default function Search() {
                         <p className="text-sm text-muted-foreground mt-2">
                             {error instanceof Error
                                 ? error.message
-                                : 'Please try again later'}
+                                : 'Please try again'}
                         </p>
                     </div>
                 </main>
@@ -87,10 +100,7 @@ export default function Search() {
         );
     }
 
-    // Safely get perfume list
-    const perfumeList = perfumes && Array.isArray(perfumes) ? perfumes : [];
-
-    // Show empty results
+    // No results
     if (perfumeList.length === 0) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -101,7 +111,7 @@ export default function Search() {
                             No fragrances found
                         </p>
                         <p className="text-sm text-muted-foreground/70">
-                            Try a different search term or browse our collection
+                            Try a different search
                         </p>
                         <Link to="/">
                             <Button className="mt-6">Back to Home</Button>
@@ -113,7 +123,7 @@ export default function Search() {
         );
     }
 
-    // Show results
+    // Results
     return (
         <div className="min-h-screen flex flex-col">
             <Header />
@@ -130,123 +140,113 @@ export default function Search() {
                 </div>
 
                 <div className="grid gap-6">
-                    {perfumeList.map((perfume, index) => {
-                        // Skip invalid entries
-                        if (!perfume || !perfume.id) {
-                            return null;
-                        }
+                    {perfumeList.map((perfume, index) => (
+                        <Link
+                            key={perfume.id}
+                            to={`/perfume/${perfume.id}`}
+                            className="group opacity-0 animate-fade-in"
+                            style={{
+                                animationDelay: `${index * 50}ms`,
+                                animationFillMode: 'forwards',
+                            }}
+                        >
+                            <article className="flex flex-col md:flex-row gap-6 p-6 border border-border rounded-lg hover:border-accent/50 hover:shadow-lg transition-all duration-300 bg-card">
+                                <div className="w-full md:w-40 h-40 flex-shrink-0 overflow-hidden rounded-lg bg-secondary/20">
+                                    <img
+                                        src={
+                                            perfume.imageUrl ||
+                                            '/placeholder.svg'
+                                        }
+                                        alt={perfume.name || 'Perfume'}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+                                </div>
 
-                        return (
-                            <Link
-                                key={perfume.id}
-                                to={`/perfume/${perfume.id}`}
-                                className="group opacity-0 animate-fade-in"
-                                style={{
-                                    animationDelay: `${index * 50}ms`,
-                                    animationFillMode: 'forwards',
-                                }}
-                            >
-                                <article className="flex flex-col md:flex-row gap-6 p-6 border border-border rounded-lg hover:border-accent/50 hover:shadow-lg transition-all duration-300 bg-card">
-                                    <div className="w-full md:w-40 h-40 flex-shrink-0 overflow-hidden rounded-lg bg-secondary/20">
-                                        <img
-                                            src={
-                                                perfume.imageUrl ||
-                                                '/placeholder.svg'
-                                            }
-                                            alt={perfume.name || 'Unnamed'}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                        />
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-4 mb-2">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground uppercase tracking-wider">
-                                                    {perfume.brand || 'Unknown'}
-                                                </p>
-                                                <h2 className="font-display text-xl md:text-2xl font-medium group-hover:text-accent transition-colors">
-                                                    {perfume.name || 'Unnamed'}
-                                                </h2>
-                                            </div>
-                                            {perfume.rating &&
-                                                typeof perfume.rating ===
-                                                    'number' && (
-                                                    <div className="flex items-center gap-1 px-2 py-1 bg-secondary/30 rounded-full flex-shrink-0">
-                                                        <Star className="h-4 w-4 fill-accent text-accent" />
-                                                        <span className="font-medium">
-                                                            {perfume.rating.toFixed(
-                                                                1
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-4 mb-2">
+                                        <div>
+                                            <p className="text-sm text-muted-foreground uppercase tracking-wider">
+                                                {perfume.brand || 'Unknown'}
+                                            </p>
+                                            <h2 className="font-display text-xl md:text-2xl font-medium group-hover:text-accent transition-colors">
+                                                {perfume.name || 'Unnamed'}
+                                            </h2>
                                         </div>
-
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            {perfume.gender && (
-                                                <span className="text-xs px-2 py-1 bg-muted rounded-full capitalize">
-                                                    {perfume.gender}
-                                                </span>
-                                            )}
-                                            {perfume.concentration && (
-                                                <span className="text-xs px-2 py-1 bg-muted rounded-full">
-                                                    {perfume.concentration}
-                                                </span>
-                                            )}
-                                            {perfume.year &&
-                                                typeof perfume.year ===
-                                                    'number' && (
-                                                    <span className="text-xs px-2 py-1 bg-muted rounded-full">
-                                                        {perfume.year}
+                                        {perfume.rating &&
+                                            typeof perfume.rating ===
+                                                'number' && (
+                                                <div className="flex items-center gap-1 px-2 py-1 bg-secondary/30 rounded-full flex-shrink-0">
+                                                    <Star className="h-4 w-4 fill-accent text-accent" />
+                                                    <span className="font-medium">
+                                                        {perfume.rating.toFixed(
+                                                            1
+                                                        )}
                                                     </span>
-                                                )}
-                                        </div>
-
-                                        {perfume.notes &&
-                                            typeof perfume.notes === 'object' &&
-                                            perfume.notes.top &&
-                                            Array.isArray(perfume.notes.top) &&
-                                            perfume.notes.top.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-medium text-accent">
-                                                            Top:
-                                                        </span>
-                                                        {perfume.notes.top
-                                                            .slice(0, 4)
-                                                            .map((note) => (
-                                                                <span
-                                                                    key={note}
-                                                                    className="text-xs text-muted-foreground"
-                                                                >
-                                                                    {note}
-                                                                </span>
-                                                            ))}
-                                                    </div>
                                                 </div>
                                             )}
+                                    </div>
 
-                                        {perfume.accords &&
-                                            Array.isArray(perfume.accords) &&
-                                            perfume.accords.length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 mt-3">
-                                                    {perfume.accords
-                                                        .slice(0, 5)
-                                                        .map((accord) => (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {perfume.gender && (
+                                            <span className="text-xs px-2 py-1 bg-muted rounded-full capitalize">
+                                                {perfume.gender}
+                                            </span>
+                                        )}
+                                        {perfume.concentration && (
+                                            <span className="text-xs px-2 py-1 bg-muted rounded-full">
+                                                {perfume.concentration}
+                                            </span>
+                                        )}
+                                        {perfume.year &&
+                                            typeof perfume.year ===
+                                                'number' && (
+                                                <span className="text-xs px-2 py-1 bg-muted rounded-full">
+                                                    {perfume.year}
+                                                </span>
+                                            )}
+                                    </div>
+
+                                    {perfume.notes &&
+                                        perfume.notes.top &&
+                                        perfume.notes.top.length > 0 && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-xs font-medium text-accent">
+                                                        Top:
+                                                    </span>
+                                                    {perfume.notes.top
+                                                        .slice(0, 4)
+                                                        .map((note) => (
                                                             <span
-                                                                key={accord}
-                                                                className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-full"
+                                                                key={note}
+                                                                className="text-xs text-muted-foreground"
                                                             >
-                                                                {accord}
+                                                                {note}
                                                             </span>
                                                         ))}
                                                 </div>
-                                            )}
-                                    </div>
-                                </article>
-                            </Link>
-                        );
-                    })}
+                                            </div>
+                                        )}
+
+                                    {perfume.accords &&
+                                        perfume.accords.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                                {perfume.accords
+                                                    .slice(0, 5)
+                                                    .map((accord) => (
+                                                        <span
+                                                            key={accord}
+                                                            className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-full"
+                                                        >
+                                                            {accord}
+                                                        </span>
+                                                    ))}
+                                            </div>
+                                        )}
+                                </div>
+                            </article>
+                        </Link>
+                    ))}
                 </div>
             </main>
 
