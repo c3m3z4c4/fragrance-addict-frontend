@@ -28,7 +28,9 @@ const getApiBaseUrl = (): string => {
                 window.location.hostname.includes('192.168') ||
                 window.location.hostname.includes('127.0.0.1')
             ) {
-                console.log('📍 Development mode detected, using localhost:3000');
+                console.log(
+                    '📍 Development mode detected, using localhost:3000'
+                );
                 return 'http://localhost:3000';
             }
         }
@@ -341,9 +343,7 @@ export async function checkExistingUrls(urls: string[]): Promise<{
 }
 
 // Add URLs to scraping queue
-export async function addToQueue(
-    urls: string[]
-): Promise<{
+export async function addToQueue(urls: string[]): Promise<{
     success: boolean;
     added?: number;
     skipped?: number;
@@ -452,9 +452,7 @@ export interface IncompletePerfume {
 }
 
 // Get incomplete perfumes that need re-scraping
-export async function getIncompletePerfumes(
-    limit = 50
-): Promise<{
+export async function getIncompletePerfumes(limit = 50): Promise<{
     success: boolean;
     count?: number;
     perfumes?: IncompletePerfume[];
@@ -511,9 +509,7 @@ export async function rescrapePerfumes(ids: string[]): Promise<{
 }
 
 // Add incomplete perfumes to re-scrape queue
-export async function addIncompleteToQueue(
-    limit = 50
-): Promise<{
+export async function addIncompleteToQueue(limit = 50): Promise<{
     success: boolean;
     added?: number;
     queueSize?: number;
