@@ -45,15 +45,18 @@ export function SitemapImporter() {
   const [fetchedUrls, setFetchedUrls] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  // Poll queue status every 3 seconds when processing
+  // Poll queue status every 10 seconds when processing (to avoid rate limiting)
   const { data: queueStatus, refetch: refetchStatus } = useQuery({
     queryKey: ['queue-status'],
     queryFn: getQueueStatus,
     refetchInterval: (query) => {
       const data = query.state.data as QueueStatus | undefined;
-      return data?.processing ? 3000 : false;
+      // Only poll when actively processing, use 10s interval to avoid rate limits
+      return data?.processing ? 10000 : false;
     },
-    retry: false,
+    retry: 1,
+    retryDelay: 5000,
+    staleTime: 5000,
   });
 
   // Refetch when queue starts/stops
