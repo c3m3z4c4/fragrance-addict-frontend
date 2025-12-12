@@ -113,31 +113,27 @@ export async function fetchPerfumes(
         const data = await response.json();
 
         // Handle both response formats
+        let perfumesData: any[] = [];
         if (data.data && data.pagination) {
             // New format from backend: { success, data, pagination }
-            return {
-                perfumes: Array.isArray(data.data) ? data.data : [],
-                total: data.pagination.total || 0,
-                page: data.pagination.page || page,
-                limit: data.pagination.limit || limit,
-            };
+            perfumesData = Array.isArray(data.data) ? data.data : [];
         } else if (data.perfumes) {
             // Old format: { perfumes, total, page, limit }
-            return {
-                perfumes: Array.isArray(data.perfumes) ? data.perfumes : [],
-                total: data.total || 0,
-                page: data.page || page,
-                limit: data.limit || limit,
-            };
-        } else {
+            perfumesData = Array.isArray(data.perfumes) ? data.perfumes : [];
+        } else if (Array.isArray(data)) {
             // Direct array response
-            return {
-                perfumes: Array.isArray(data) ? data : [],
-                total: data.total || 0,
-                page,
-                limit,
-            };
+            perfumesData = data;
         }
+
+        // Sanitize all perfumes
+        const sanitized = perfumesData.map((item) => deepSanitizePerfume(item));
+
+        return {
+            perfumes: sanitized,
+            total: data.pagination?.total || data.total || 0,
+            page: data.pagination?.page || data.page || page,
+            limit: data.pagination?.limit || data.limit || limit,
+        };
     } catch (error) {
         console.error('❌ Fetch perfumes error:', error);
         return {
@@ -287,13 +283,14 @@ export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
         const data = await response.json();
 
         // Handle both response formats
+        let perfume: any = null;
         if (data.data && typeof data.data === 'object') {
-            return data.data;
+            perfume = data.data;
         } else if (data && typeof data === 'object' && !data.success) {
-            return data;
+            perfume = data;
         }
 
-        return null;
+        return perfume ? deepSanitizePerfume(perfume) : null;
     } catch (error) {
         console.error('❌ Fetch perfume by ID error:', error);
         return null;
@@ -315,12 +312,16 @@ export async function fetchPerfumesByBrand(
         const data = await response.json();
 
         // Handle both response formats
+        let results: any[] = [];
         if (data.data && Array.isArray(data.data)) {
-            return data.data;
+            results = data.data;
         } else if (data.perfumes && Array.isArray(data.perfumes)) {
-            return data.perfumes;
+            results = data.perfumes;
+        } else if (Array.isArray(data)) {
+            results = data;
         }
-        return Array.isArray(data) ? data : [];
+
+        return results.map((item) => deepSanitizePerfume(item));
     } catch (error) {
         console.error('❌ Fetch brand perfumes error:', error);
         return [];
