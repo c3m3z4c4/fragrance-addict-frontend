@@ -201,16 +201,66 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
             results = [];
         }
 
-        // Validate that results are proper APIPerfume objects with required fields
-        const validated = results.filter(
-            (item) =>
-                item &&
-                typeof item === 'object' &&
-                (item as any).id &&
-                (item as any).name &&
-                (item as any).brand
-        );
-        console.log('✅ Validated', validated.length, 'perfumes');
+        // Validate and sanitize results
+        const validated = results
+            .filter(
+                (item) =>
+                    item &&
+                    typeof item === 'object' &&
+                    (item as any).id &&
+                    (item as any).name &&
+                    (item as any).brand
+            )
+            .map((item: any) => {
+                // Sanitize accords: convert objects to strings if needed
+                if (item.accords && Array.isArray(item.accords)) {
+                    item.accords = item.accords.map((accord: any) => {
+                        if (typeof accord === 'string') return accord;
+                        if (
+                            accord &&
+                            typeof accord === 'object' &&
+                            accord.name
+                        ) {
+                            return accord.name;
+                        }
+                        return String(accord);
+                    });
+                }
+
+                // Sanitize notes: ensure they're strings
+                if (item.notes && typeof item.notes === 'object') {
+                    if (item.notes.top && Array.isArray(item.notes.top)) {
+                        item.notes.top = item.notes.top.map((note: any) => {
+                            if (typeof note === 'string') return note;
+                            if (note && typeof note === 'object' && note.name) {
+                                return note.name;
+                            }
+                            return String(note);
+                        });
+                    }
+                    if (item.notes.heart && Array.isArray(item.notes.heart)) {
+                        item.notes.heart = item.notes.heart.map((note: any) => {
+                            if (typeof note === 'string') return note;
+                            if (note && typeof note === 'object' && note.name) {
+                                return note.name;
+                            }
+                            return String(note);
+                        });
+                    }
+                    if (item.notes.base && Array.isArray(item.notes.base)) {
+                        item.notes.base = item.notes.base.map((note: any) => {
+                            if (typeof note === 'string') return note;
+                            if (note && typeof note === 'object' && note.name) {
+                                return note.name;
+                            }
+                            return String(note);
+                        });
+                    }
+                }
+
+                return item;
+            });
+        console.log('✅ Validated and sanitized', validated.length, 'perfumes');
         return validated as APIPerfume[];
     } catch (error) {
         console.error('❌ Search error:', error);
