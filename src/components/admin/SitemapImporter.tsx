@@ -7,6 +7,7 @@ import {
   stopQueue, 
   getQueueStatus, 
   clearQueue,
+  checkExistingUrls,
   type QueueStatus 
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -23,13 +24,25 @@ import {
   Clock, 
   CheckCircle2, 
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Plus,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface UrlCheckResult {
+  total: number;
+  existingCount: number;
+  newCount: number;
+  newUrls: string[];
+}
 
 export function SitemapImporter() {
   const [brand, setBrand] = useState('');
   const [limit, setLimit] = useState('50');
+  const [urlCheckResult, setUrlCheckResult] = useState<UrlCheckResult | null>(null);
+  const [fetchedUrls, setFetchedUrls] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   // Poll queue status every 3 seconds when processing
@@ -54,29 +67,58 @@ export function SitemapImporter() {
     }
   }, [queueStatus?.processing, queryClient]);
 
+  // Fetch URLs and check which ones already exist
   const fetchUrlsMutation = useMutation({
-    mutationFn: () => fetchSitemapUrls(brand || undefined, parseInt(limit)),
-    onSuccess: async (result) => {
-      if (result.success && result.urls) {
+    mutationFn: async () => {
+      // First, fetch URLs from Fragrantica
+      const result = await fetchSitemapUrls(brand || undefined, parseInt(limit));
+      if (!result.success || !result.urls) {
+        throw new Error(result.error || 'Failed to fetch URLs');
+      }
+      
+      setFetchedUrls(result.urls);
+      
+      // Then check which ones already exist
+      const checkResult = await checkExistingUrls(result.urls);
+      if (!checkResult.success) {
+        throw new Error(checkResult.error || 'Failed to check existing URLs');
+      }
+      
+      return checkResult;
+    },
+    onSuccess: (result) => {
+      setUrlCheckResult({
+        total: result.total || 0,
+        existingCount: result.existingCount || 0,
+        newCount: result.newCount || 0,
+        newUrls: result.newUrls || []
+      });
+      
+      toast({ 
+        title: 'URLs Checked', 
+        description: `Found ${result.newCount} new perfumes (${result.existingCount} already exist)` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Add only new URLs to the queue
+  const addToQueueMutation = useMutation({
+    mutationFn: () => addToQueue(urlCheckResult?.newUrls || []),
+    onSuccess: (result) => {
+      if (result.success) {
         toast({ 
-          title: 'URLs Found', 
-          description: `Found ${result.count} perfume URLs` 
+          title: 'Added to Queue', 
+          description: `${result.added} URLs added` 
         });
-        
-        // Add to queue
-        const addResult = await addToQueue(result.urls);
-        if (addResult.success) {
-          toast({ 
-            title: 'Added to Queue', 
-            description: `${addResult.added} URLs added (${addResult.skipped} duplicates skipped)` 
-          });
-          refetchStatus();
-        }
-      } else {
-        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        setUrlCheckResult(null);
+        setFetchedUrls([]);
+        refetchStatus();
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
@@ -153,15 +195,75 @@ export function SitemapImporter() {
             </div>
             <div className="flex items-end">
               <Button 
-                onClick={() => fetchUrlsMutation.mutate()}
+                onClick={() => {
+                  setUrlCheckResult(null);
+                  fetchUrlsMutation.mutate();
+                }}
                 disabled={fetchUrlsMutation.isPending}
                 className="w-full"
               >
                 {fetchUrlsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Fetch & Add to Queue
+                <Search className="h-4 w-4 mr-2" />
+                Check URLs
               </Button>
             </div>
           </div>
+
+          {/* URL Check Results Preview */}
+          {urlCheckResult && (
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Database className="h-4 w-4" />
+                  URL Verification Results
+                </h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUrlCheckResult(null);
+                    setFetchedUrls([]);
+                  }}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-background rounded-lg border">
+                  <p className="text-2xl font-bold">{urlCheckResult.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Found</p>
+                </div>
+                <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <p className="text-2xl font-bold text-green-600">{urlCheckResult.newCount}</p>
+                  <p className="text-xs text-muted-foreground">New Perfumes</p>
+                </div>
+                <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  <p className="text-2xl font-bold text-amber-600">{urlCheckResult.existingCount}</p>
+                  <p className="text-xs text-muted-foreground">Already Exist</p>
+                </div>
+              </div>
+
+              {urlCheckResult.newCount > 0 ? (
+                <div className="flex items-center gap-3">
+                  <Button 
+                    onClick={() => addToQueueMutation.mutate()}
+                    disabled={addToQueueMutation.isPending}
+                    className="flex-1"
+                  >
+                    {addToQueueMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add {urlCheckResult.newCount} New URLs to Queue
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-500/10 p-3 rounded-lg">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="text-sm">All perfumes from this brand are already in your database!</span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
