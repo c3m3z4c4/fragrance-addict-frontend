@@ -15,21 +15,35 @@ export function usePerfumeSearch(query: string) {
         queryKey: ['perfumes', 'search', query],
         queryFn: async () => {
             console.log('📡 Fetching perfumes for:', query);
-            const data = await searchPerfumes(query);
-            return Array.isArray(data) ? data : [];
+            try {
+                const data = await searchPerfumes(query);
+                if (!Array.isArray(data)) {
+                    console.warn('❌ Data is not array:', typeof data);
+                    return [];
+                }
+                console.log('✅ Got array with', data.length, 'items');
+                return data;
+            } catch (err) {
+                console.error('❌ Error fetching:', err);
+                return [];
+            }
         },
         enabled: isEnabled,
         staleTime: 1000 * 60 * 5,
         retry: 1,
     });
 
-    // Always return a safe object
+    // Build safe return object
+    const safeData: APIPerfume[] = [];
+    if (Array.isArray(result.data)) {
+        safeData.push(...result.data);
+    }
+
     return {
-        data: isEnabled ? (Array.isArray(result.data) ? result.data : []) : [],
-        isLoading: isEnabled ? result.isLoading : false,
+        data: safeData,
+        isLoading: isEnabled && result.isLoading,
         error: isEnabled ? result.error : null,
-        status: result.status,
-    } as const;
+    };
 }
 export function usePerfumes(page = 1, limit = 20) {
     return useQuery({

@@ -13,6 +13,9 @@ export default function Search() {
     // Always call hook - it handles disabled state internally
     const { data, isLoading, error } = usePerfumeSearch(query);
 
+    // Ensure data is always an array
+    const perfumes = Array.isArray(data) ? data : [];
+
     // Early return for invalid query
     if (query.length < 2) {
         return (
@@ -89,7 +92,7 @@ export default function Search() {
     }
 
     // No results
-    if (!data || data.length === 0) {
+    if (perfumes.length === 0) {
         return (
             <div className="min-h-screen flex flex-col">
                 <Header />
@@ -121,15 +124,16 @@ export default function Search() {
                         Results for "{query}"
                     </h1>
                     <p className="text-muted-foreground text-lg">
-                        {data.length}{' '}
-                        {data.length === 1 ? 'fragrance' : 'fragrances'} found
+                        {perfumes.length}{' '}
+                        {perfumes.length === 1 ? 'fragrance' : 'fragrances'}{' '}
+                        found
                     </p>
                 </div>
 
                 <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {data
-                        .filter((p) => p && p.id)
-                        .map((perfume, index) => (
+                    {perfumes.map((perfume, index) => {
+                        if (!perfume || !perfume.id) return null;
+                        return (
                             <Link
                                 key={perfume.id}
                                 to={`/perfume/${perfume.id}`}
@@ -234,7 +238,8 @@ export default function Search() {
                                     </div>
                                 </article>
                             </Link>
-                        ))}
+                        );
+                    })}
                 </div>
             </main>
 
