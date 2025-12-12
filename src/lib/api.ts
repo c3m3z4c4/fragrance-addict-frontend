@@ -201,6 +201,33 @@ export async function fetchSitemapUrls(brand?: string, limit = 100): Promise<{ s
   return { success: true, urls: data.urls, count: data.count };
 }
 
+// Check which URLs already exist in the database
+export async function checkExistingUrls(urls: string[]): Promise<{ 
+  success: boolean; 
+  total?: number;
+  existingCount?: number;
+  newCount?: number;
+  existing?: string[]; 
+  newUrls?: string[]; 
+  error?: string 
+}> {
+  const response = await fetch(`${API_BASE_URL}/api/scrape/queue/check`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+    },
+    body: JSON.stringify({ urls }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to check URLs' }));
+    return { success: false, error: error.error || 'Failed to check URLs' };
+  }
+  
+  return response.json();
+}
+
 // Add URLs to scraping queue
 export async function addToQueue(urls: string[]): Promise<{ success: boolean; added?: number; skipped?: number; error?: string }> {
   const response = await fetch(`${API_BASE_URL}/api/scrape/queue`, {
