@@ -1,20 +1,35 @@
 import { useSearchParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const ITEMS_PER_PAGE = 12;
 
 export default function Search() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Always call hook - it handles disabled state internally
     const { data, isLoading, error } = usePerfumeSearch(query);
 
     // Ensure data is always an array
-    const perfumes = Array.isArray(data) ? data : [];
+    const allPerfumes = Array.isArray(data) ? data : [];
+
+    // Calculate pagination
+    const totalPages = Math.ceil(allPerfumes.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const perfumes = allPerfumes.slice(startIndex, endIndex);
+
+    // Reset to page 1 when query changes
+    const handleSearch = () => {
+        setCurrentPage(1);
+    };
 
     // Early return for invalid query
     if (query.length < 2) {
@@ -124,9 +139,15 @@ export default function Search() {
                         Results for "{query}"
                     </h1>
                     <p className="text-muted-foreground text-lg">
-                        {perfumes.length}{' '}
-                        {perfumes.length === 1 ? 'fragrance' : 'fragrances'}{' '}
+                        {allPerfumes.length}{' '}
+                        {allPerfumes.length === 1 ? 'fragrance' : 'fragrances'}{' '}
                         found
+                        {totalPages > 1 && (
+                            <span className="text-sm">
+                                {' '}
+                                · Showing page {currentPage} of {totalPages}
+                            </span>
+                        )}
                     </p>
                 </div>
 
@@ -253,6 +274,61 @@ export default function Search() {
                     })}
                 </div>
             </main>
+
+            {totalPages > 1 && (
+                <div className="container mx-auto px-4 md:px-8 pb-12">
+                    <div className="flex items-center justify-center gap-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                setCurrentPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={currentPage === 1}
+                            className="flex items-center gap-2"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Previous
+                        </Button>
+
+                        <div className="flex items-center gap-2">
+                            {Array.from(
+                                { length: totalPages },
+                                (_, i) => i + 1
+                            ).map((page) => (
+                                <Button
+                                    key={page}
+                                    variant={
+                                        currentPage === page
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    size="sm"
+                                    onClick={() => setCurrentPage(page)}
+                                    className="min-w-[40px]"
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                setCurrentPage((prev) =>
+                                    Math.min(totalPages, prev + 1)
+                                )
+                            }
+                            disabled={currentPage === totalPages}
+                            className="flex items-center gap-2"
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </div>
