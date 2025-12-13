@@ -19,30 +19,43 @@ const getApiBaseUrl = (): string => {
             return import.meta.env.VITE_API_URL;
         }
 
-        // 2. Detectar si estamos en localhost (desarrollo local)
-        // Usar typeof window para evitar errores si window no existe
+        // 2. Si está en localhost/127.0.0.1 (desarrollo local en la misma máquina)
         if (typeof window !== 'undefined') {
-            if (
-                window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1' ||
-                window.location.hostname.includes('192.168') ||
-                window.location.hostname.includes('127.0.0.1')
-            ) {
+            const hostname = window.location.hostname;
+
+            // Desarrollo local - mismo servidor
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 console.log(
-                    '📍 Development mode detected, using localhost:3000'
+                    '📍 Development mode detected (localhost), using http://' +
+                        hostname +
+                        ':3000'
                 );
-                return 'http://localhost:3000';
+                return `http://${hostname}:3000`;
+            }
+
+            // Red local/interna - usar IP con puerto 3000
+            // (e.g., 192.168.x.x, 172.16.x.x, 10.x.x.x)
+            if (/^(192\.168|172\.(1[6-9]|2[0-9]|3[01])|10\.)/.test(hostname)) {
+                console.log(
+                    '📍 Local network detected, using http://' +
+                        hostname +
+                        ':3000'
+                );
+                return `http://${hostname}:3000`;
             }
         }
 
-        // 3. URL de fallback
+        // 3. URL pública/producción - usar dominio traefik
         const fallback =
             'https://fragranceadict-backend-0tf5vy-debd22-31-97-41-99.traefik.me';
-        console.log('📍 Using fallback API URL:', fallback);
+        console.log('📍 Using production API URL:', fallback);
         return fallback;
     } catch (error) {
         console.error('❌ Error determining API_BASE_URL:', error);
-        // Fallback seguro
+        // Fallback seguro - intentar obtener hostname
+        if (typeof window !== 'undefined') {
+            return `http://${window.location.hostname}:3000`;
+        }
         return 'http://localhost:3000';
     }
 };
