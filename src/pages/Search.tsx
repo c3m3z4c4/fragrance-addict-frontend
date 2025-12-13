@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
@@ -21,15 +21,15 @@ export default function Search() {
     const allPerfumes = Array.isArray(data) ? data : [];
 
     // Calculate pagination
-    const totalPages = Math.ceil(allPerfumes.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(allPerfumes.length / ITEMS_PER_PAGE) || 1;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const perfumes = allPerfumes.slice(startIndex, endIndex);
 
     // Reset to page 1 when query changes
-    const handleSearch = () => {
+    useEffect(() => {
         setCurrentPage(1);
-    };
+    }, [query]);
 
     // Early return for invalid query
     if (query.length < 2) {
@@ -275,57 +275,61 @@ export default function Search() {
                 </div>
             </main>
 
-            {totalPages > 1 && (
-                <div className="container mx-auto px-4 md:px-8 pb-12">
-                    <div className="flex items-center justify-center gap-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                setCurrentPage((prev) => Math.max(1, prev - 1))
-                            }
-                            disabled={currentPage === 1}
-                            className="flex items-center gap-2"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            Previous
-                        </Button>
+            {allPerfumes.length > 0 && totalPages > 1 && (
+                <div className="border-t border-border">
+                    <div className="container mx-auto px-4 md:px-8 py-8">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    setCurrentPage((prev) =>
+                                        Math.max(1, prev - 1)
+                                    )
+                                }
+                                disabled={currentPage === 1}
+                                className="flex items-center gap-2"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                            </Button>
 
-                        <div className="flex items-center gap-2">
-                            {Array.from(
-                                { length: totalPages },
-                                (_, i) => i + 1
-                            ).map((page) => (
-                                <Button
-                                    key={page}
-                                    variant={
-                                        currentPage === page
-                                            ? 'default'
-                                            : 'outline'
-                                    }
-                                    size="sm"
-                                    onClick={() => setCurrentPage(page)}
-                                    className="min-w-[40px]"
-                                >
-                                    {page}
-                                </Button>
-                            ))}
+                            <div className="flex items-center gap-1 flex-wrap justify-center">
+                                {Array.from(
+                                    { length: totalPages },
+                                    (_, i) => i + 1
+                                ).map((page) => (
+                                    <Button
+                                        key={page}
+                                        variant={
+                                            currentPage === page
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                        size="sm"
+                                        onClick={() => setCurrentPage(page)}
+                                        className="min-w-[40px]"
+                                    >
+                                        {page}
+                                    </Button>
+                                ))}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    setCurrentPage((prev) =>
+                                        Math.min(totalPages, prev + 1)
+                                    )
+                                }
+                                disabled={currentPage === totalPages}
+                                className="flex items-center gap-2"
+                            >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
                         </div>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                setCurrentPage((prev) =>
-                                    Math.min(totalPages, prev + 1)
-                                )
-                            }
-                            disabled={currentPage === totalPages}
-                            className="flex items-center gap-2"
-                        >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
                     </div>
                 </div>
             )}
