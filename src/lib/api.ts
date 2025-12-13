@@ -285,6 +285,11 @@ export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
         }
         const data = await response.json();
         console.log('Raw perfume data:', data);
+        console.log('Data.data contents:', data.data);
+        console.log(
+            'Data.data keys:',
+            data.data ? Object.keys(data.data) : 'N/A'
+        );
 
         // Handle both response formats
         let perfume: any = null;
@@ -309,7 +314,11 @@ export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
         }
 
         if (!perfume || !perfume.id || !perfume.name) {
-            console.warn('❌ Perfume missing required fields');
+            console.warn('❌ Perfume missing required fields:', {
+                id: !!perfume?.id,
+                name: !!perfume?.name,
+                brand: !!perfume?.brand,
+            });
             return null;
         }
 
