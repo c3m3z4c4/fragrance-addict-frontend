@@ -13,12 +13,20 @@ export default function Search() {
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
     const [currentPage, setCurrentPage] = useState(1);
+    const [genderFilter, setGenderFilter] = useState<
+        'all' | 'masculine' | 'feminine' | 'unisex'
+    >('all');
 
     // Always call hook - it handles disabled state internally
     const { data, isLoading, error } = usePerfumeSearch(query);
 
     // Ensure data is always an array
-    const allPerfumes = Array.isArray(data) ? data : [];
+    let allPerfumes = Array.isArray(data) ? data : [];
+
+    // Apply gender filter
+    if (genderFilter !== 'all') {
+        allPerfumes = allPerfumes.filter((p) => p.gender === genderFilter);
+    }
 
     // Calculate pagination
     const totalPages = Math.ceil(allPerfumes.length / ITEMS_PER_PAGE) || 1;
@@ -30,6 +38,14 @@ export default function Search() {
     useEffect(() => {
         setCurrentPage(1);
     }, [query]);
+
+    // Handle gender filter change
+    const handleGenderFilterChange = (
+        gender: 'all' | 'masculine' | 'feminine' | 'unisex'
+    ) => {
+        setGenderFilter(gender);
+        setCurrentPage(1);
+    };
 
     // Early return for invalid query
     if (query.length < 2) {
@@ -138,7 +154,7 @@ export default function Search() {
                     <h1 className="font-display text-4xl md:text-5xl font-medium mb-3">
                         Results for "{query}"
                     </h1>
-                    <p className="text-muted-foreground text-lg">
+                    <p className="text-muted-foreground text-lg mb-6">
                         {allPerfumes.length}{' '}
                         {allPerfumes.length === 1 ? 'fragrance' : 'fragrances'}{' '}
                         found
@@ -149,6 +165,57 @@ export default function Search() {
                             </span>
                         )}
                     </p>
+
+                    {/* Gender Filter */}
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-sm font-semibold text-muted-foreground">
+                            Filter by gender:
+                        </span>
+                        <Button
+                            variant={
+                                genderFilter === 'all' ? 'default' : 'outline'
+                            }
+                            size="sm"
+                            onClick={() => handleGenderFilterChange('all')}
+                        >
+                            All
+                        </Button>
+                        <Button
+                            variant={
+                                genderFilter === 'masculine'
+                                    ? 'default'
+                                    : 'outline'
+                            }
+                            size="sm"
+                            onClick={() =>
+                                handleGenderFilterChange('masculine')
+                            }
+                        >
+                            Masculine
+                        </Button>
+                        <Button
+                            variant={
+                                genderFilter === 'feminine'
+                                    ? 'default'
+                                    : 'outline'
+                            }
+                            size="sm"
+                            onClick={() => handleGenderFilterChange('feminine')}
+                        >
+                            Feminine
+                        </Button>
+                        <Button
+                            variant={
+                                genderFilter === 'unisex'
+                                    ? 'default'
+                                    : 'outline'
+                            }
+                            size="sm"
+                            onClick={() => handleGenderFilterChange('unisex')}
+                        >
+                            Unisex
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
