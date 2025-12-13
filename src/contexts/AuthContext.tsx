@@ -9,21 +9,25 @@ import { API_BASE_URL } from '@/lib/api';
 
 interface AuthContextType {
     isAdmin: boolean;
+    apiKey: string | null;
     isLoading: boolean;
     login: (apiKey: string) => Promise<boolean>;
     logout: () => void;
+    setApiKey: (key: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_KEY_STORAGE = 'fragrance_admin_key';
+const API_KEY_STORAGE = 'apiKey';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAdmin, setIsAdmin] = useState(false);
+    const [apiKey, setApiKeyState] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // Validate API key against backend
-    const validateApiKey = async (apiKey: string): Promise<boolean> => {
+    const validateApiKey = async (key: string): Promise<boolean> => {
         try {
             console.log(
                 '🔐 Validating API key against:',
@@ -32,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
                 headers: {
-                    'x-api-key': apiKey,
+                    'x-api-key': key,
                 },
             });
 
@@ -56,29 +60,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    // Check stored key on mount
+    // Check stored keys on mount
     useEffect(() => {
-        const checkStoredKey = async () => {
-            const storedKey = localStorage.getItem(ADMIN_KEY_STORAGE);
-            if (storedKey) {
-                console.log('🔍 Checking stored API key...');
-                const isValid = await validateApiKey(storedKey);
+        const checkStoredKeys = async () => {
+            // Check admin key
+            const storedAdminKey = localStorage.getItem(ADMIN_KEY_STORAGE);
+            if (storedAdminKey) {
+                console.log('🔍 Checking stored admin API key...');
+                const isValid = await validateApiKey(storedAdminKey);
                 setIsAdmin(isValid);
                 if (!isValid) {
-                    console.log('🗑️ Removing invalid stored key');
+                    console.log('🗑️ Removing invalid stored admin key');
                     localStorage.removeItem(ADMIN_KEY_STORAGE);
                 }
             }
+
+            // Check regular API key
+            const storedApiKey = localStorage.getItem(API_KEY_STORAGE);
+            if (storedApiKey) {
+                console.log('🔍 Checking stored API key...');
+                const isValid = await validateApiKey(storedApiKey);
+                if (isValid) {
+                    setApiKeyState(storedApiKey);
+                } else {
+                    console.log('🗑️ Removing invalid stored API key');
+                    localStorage.removeItem(API_KEY_STORAGE);
+                }
+            }
+
             setIsLoading(false);
         };
-        checkStoredKey();
+        checkStoredKeys();
     }, []);
 
-    const login = async (apiKey: string): Promise<boolean> => {
+    const login = async (key: string): Promise<boolean> => {
         setIsLoading(true);
-        const isValid = await validateApiKey(apiKey);
+        const isValid = await validateApiKey(key);
         if (isValid) {
-            localStorage.setItem(ADMIN_KEY_STORAGE, apiKey);
+            localStorage.setItem(ADMIN_KEY_STORAGE, key);
             setIsAdmin(true);
         }
         setIsLoading(false);
@@ -87,11 +106,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = () => {
         localStorage.removeItem(ADMIN_KEY_STORAGE);
+        localStorage.removeItem(API_KEY_STORAGE);
         setIsAdmin(false);
+        setApiKeyState(null);
+    };
+
+    const setApiKey = (key: string | null) => {
+        if (key) {
+            localStorage.setItem(API_KEY_STORAGE, key);
+            setApiKeyState(key);
+        } else {
+            localStorage.removeItem(API_KEY_STORAGE);
+            setApiKeyState(null);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ isAdmin, isLoading, login, logout }}>
+        <AuthContext.Provider
+            value={{ isAdmin, apiKey, isLoading, login, logout, setApiKey }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -107,4 +140,8 @@ export function useAuth() {
 
 export function getStoredAdminKey(): string {
     return localStorage.getItem(ADMIN_KEY_STORAGE) || '';
+}
+
+export function getStoredApiKey(): string {
+    return localStorage.getItem(API_KEY_STORAGE) || '';
 }

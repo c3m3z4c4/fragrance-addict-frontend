@@ -14,6 +14,7 @@ import Search from './pages/Search';
 import { SearchDebug } from './pages/SearchDebug';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import { ApiKeys } from './pages/ApiKeys';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -58,6 +59,14 @@ function AppRoutes() {
             <Route path="/brands" element={<Brands />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
+            <Route
+                path="/api-keys"
+                element={
+                    <ProtectedRoute>
+                        <ApiKeys />
+                    </ProtectedRoute>
+                }
+            />
             <Route
                 path="/admin"
                 element={
