@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 10;
 
 export default function Search() {
     const [searchParams] = useSearchParams();
