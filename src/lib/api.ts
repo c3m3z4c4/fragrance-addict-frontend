@@ -291,9 +291,18 @@ export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
             data.data ? Object.keys(data.data) : 'N/A'
         );
 
-        // Handle both response formats
+        // Handle both response formats - check for double nesting
         let perfume: any = null;
-        if (data.data && typeof data.data === 'object') {
+
+        // Check if data.data.data exists (double nesting)
+        if (
+            data.data?.data &&
+            typeof data.data.data === 'object' &&
+            data.data.data.id
+        ) {
+            console.log('Using data.data.data format (double nested)');
+            perfume = data.data.data;
+        } else if (data.data && typeof data.data === 'object' && data.data.id) {
             console.log('Using data.data format');
             perfume = data.data;
         } else if (data && typeof data === 'object' && data.id) {
