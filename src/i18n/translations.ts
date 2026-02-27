@@ -8,6 +8,7 @@ export const translations = {
         brands: 'Brands',
         about: 'About',
         admin: 'Admin',
+        apiKeys: 'API Keys',
       },
       // Common
       common: {
@@ -19,8 +20,15 @@ export const translations = {
         cancel: 'Cancel',
         delete: 'Delete',
         notFound: 'Not found',
+        backHome: 'Back to Home',
+        viewDetails: 'View Details',
+        previous: 'Previous',
+        next: 'Next',
+        page: 'page',
+        of: 'of',
+        showing: 'Showing',
       },
-      // Search Hero
+      // Search Hero & Search page
       search: {
         title: 'Discover Your',
         titleHighlight: 'Perfect Scent',
@@ -28,6 +36,23 @@ export const translations = {
         placeholder: 'Search perfumes, brands, notes...',
         trending: 'Trending Searches',
         results: 'results found',
+        noQuery: 'No search query',
+        enterChars: 'Enter at least 2 characters to search',
+        searching: 'Searching...',
+        errorLoading: 'Error loading results',
+        tryAgain: 'Please try again',
+        noResults: 'No fragrances found',
+        differentSearch: 'Try a different search',
+        resultsFor: 'Results for',
+        fragrance: 'fragrance',
+        fragrances: 'fragrances',
+        filterByGender: 'Filter by gender:',
+        all: 'All',
+        masculine: 'Masculine',
+        feminine: 'Feminine',
+        unisex: 'Unisex',
+        topNotes: 'Top Notes:',
+        showingPage: 'Showing page',
       },
       // Perfume Details
       perfume: {
@@ -47,6 +72,8 @@ export const translations = {
         masculine: 'Masculine',
         feminine: 'Feminine',
         unisex: 'Unisex',
+        unknown: 'Unknown',
+        unnamed: 'Unnamed',
       },
       // Notes Pyramid
       notes: {
@@ -80,15 +107,33 @@ export const translations = {
       // Favorites
       favorites: {
         title: 'Your Favorites',
+        subtitle: 'Your personal fragrance collection',
         empty: 'No favorites yet',
-        emptyDesc: 'Start exploring fragrances and save your favorites here',
-        explore: 'Explore Perfumes',
+        emptyDesc: 'Explore our catalog and click the heart icon to save your favorite fragrances',
+        explore: 'Explore Catalog',
+        inCollection: 'You have {{count}} fragrance in your collection',
+        inCollection_plural: 'You have {{count}} fragrances in your collection',
+        buildCollection: 'Start building your fragrance collection',
       },
       // Brands
       brands: {
         title: 'Perfume Brands',
+        subtitle: 'Discover exceptional fragrances from the world\'s most prestigious perfume houses',
         searchPlaceholder: 'Search brands...',
         perfumes: 'perfumes',
+        fragrance: 'fragrance',
+        fragrances: 'fragrances',
+      },
+      // Filters
+      filter: {
+        title: 'Filters',
+        clearAll: 'Clear all',
+        brands: 'Brands',
+        gender: 'Gender',
+        fragranceFamily: 'Fragrance Family',
+        priceRange: 'Price Range',
+        minRating: 'Minimum Rating',
+        all: 'All',
       },
       // About
       about: {
@@ -108,17 +153,23 @@ export const translations = {
       // Login
       login: {
         title: 'Admin Access',
-        description: 'Enter your API key to access the admin panel',
-        apiKeyLabel: 'API Key',
-        apiKeyPlaceholder: 'Enter your API key',
+        description: 'Sign in to access the admin panel',
+        emailLabel: 'Email',
+        emailPlaceholder: 'your@email.com',
+        passwordLabel: 'Password',
+        passwordPlaceholder: 'Your password',
         submit: 'Sign In',
+        orContinueWith: 'Or continue with',
+        continueGoogle: 'Continue with Google',
         verifying: 'Verifying...',
         success: 'Welcome back!',
-        errorEmpty: 'Please enter an API key',
-        errorInvalid: 'Invalid API key',
+        errorEmpty: 'Please enter your credentials',
+        errorInvalid: 'Invalid email or password',
         backHome: 'Back to home',
         adminOnly: 'This area is restricted to administrators.',
         logout: 'Logout',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'Enter your API key',
       },
     },
   },
@@ -131,6 +182,7 @@ export const translations = {
         brands: 'Marcas',
         about: 'Acerca de',
         admin: 'Admin',
+        apiKeys: 'API Keys',
       },
       // Common
       common: {
@@ -142,8 +194,15 @@ export const translations = {
         cancel: 'Cancelar',
         delete: 'Eliminar',
         notFound: 'No encontrado',
+        backHome: 'Volver al Inicio',
+        viewDetails: 'Ver Detalles',
+        previous: 'Anterior',
+        next: 'Siguiente',
+        page: 'página',
+        of: 'de',
+        showing: 'Mostrando',
       },
-      // Search Hero
+      // Search Hero & Search page
       search: {
         title: 'Descubre Tu',
         titleHighlight: 'Aroma Perfecto',
@@ -151,6 +210,23 @@ export const translations = {
         placeholder: 'Buscar perfumes, marcas, notas...',
         trending: 'Búsquedas Populares',
         results: 'resultados encontrados',
+        noQuery: 'Sin consulta de búsqueda',
+        enterChars: 'Ingresa al menos 2 caracteres para buscar',
+        searching: 'Buscando...',
+        errorLoading: 'Error al cargar resultados',
+        tryAgain: 'Por favor intenta de nuevo',
+        noResults: 'No se encontraron fragancias',
+        differentSearch: 'Prueba una búsqueda diferente',
+        resultsFor: 'Resultados para',
+        fragrance: 'fragancia',
+        fragrances: 'fragancias',
+        filterByGender: 'Filtrar por género:',
+        all: 'Todos',
+        masculine: 'Masculino',
+        feminine: 'Femenino',
+        unisex: 'Unisex',
+        topNotes: 'Notas de Salida:',
+        showingPage: 'Mostrando página',
       },
       // Perfume Details
       perfume: {
@@ -170,6 +246,8 @@ export const translations = {
         masculine: 'Masculino',
         feminine: 'Femenino',
         unisex: 'Unisex',
+        unknown: 'Desconocido',
+        unnamed: 'Sin nombre',
       },
       // Notes Pyramid
       notes: {
@@ -203,15 +281,33 @@ export const translations = {
       // Favorites
       favorites: {
         title: 'Tus Favoritos',
+        subtitle: 'Tu colección personal de fragancias',
         empty: 'Sin favoritos aún',
-        emptyDesc: 'Comienza a explorar fragancias y guarda tus favoritas aquí',
-        explore: 'Explorar Perfumes',
+        emptyDesc: 'Explora nuestro catálogo y haz clic en el corazón para guardar tus fragancias favoritas',
+        explore: 'Explorar Catálogo',
+        inCollection: 'Tienes {{count}} fragancia en tu colección',
+        inCollection_plural: 'Tienes {{count}} fragancias en tu colección',
+        buildCollection: 'Comienza a construir tu colección de fragancias',
       },
       // Brands
       brands: {
         title: 'Marcas de Perfumes',
+        subtitle: 'Descubre fragancias excepcionales de las casas de perfumería más prestigiosas del mundo',
         searchPlaceholder: 'Buscar marcas...',
         perfumes: 'perfumes',
+        fragrance: 'fragancia',
+        fragrances: 'fragancias',
+      },
+      // Filters
+      filter: {
+        title: 'Filtros',
+        clearAll: 'Limpiar todo',
+        brands: 'Marcas',
+        gender: 'Género',
+        fragranceFamily: 'Familia Olfativa',
+        priceRange: 'Rango de Precio',
+        minRating: 'Calificación Mínima',
+        all: 'Todos',
       },
       // About
       about: {
@@ -231,17 +327,23 @@ export const translations = {
       // Login
       login: {
         title: 'Acceso Admin',
-        description: 'Ingresa tu API key para acceder al panel de administración',
-        apiKeyLabel: 'API Key',
-        apiKeyPlaceholder: 'Ingresa tu API key',
+        description: 'Inicia sesión para acceder al panel de administración',
+        emailLabel: 'Email',
+        emailPlaceholder: 'tu@email.com',
+        passwordLabel: 'Contraseña',
+        passwordPlaceholder: 'Tu contraseña',
         submit: 'Iniciar Sesión',
+        orContinueWith: 'O continúa con',
+        continueGoogle: 'Continuar con Google',
         verifying: 'Verificando...',
         success: '¡Bienvenido!',
-        errorEmpty: 'Por favor ingresa una API key',
-        errorInvalid: 'API key inválida',
+        errorEmpty: 'Por favor ingresa tus credenciales',
+        errorInvalid: 'Email o contraseña inválidos',
         backHome: 'Volver al inicio',
         adminOnly: 'Esta área está restringida a administradores.',
         logout: 'Cerrar Sesión',
+        apiKeyLabel: 'API Key',
+        apiKeyPlaceholder: 'Ingresa tu API key',
       },
     },
   },

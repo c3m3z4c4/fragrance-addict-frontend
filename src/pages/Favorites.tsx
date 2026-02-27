@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Heart } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -10,6 +11,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { perfumes } from '@/data/perfumes';
 
 const Favorites = () => {
+  const { t } = useTranslation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { favorites } = useFavorites();
 
@@ -24,12 +26,12 @@ const Favorites = () => {
         {/* Header */}
         <div className="text-center mb-12 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
           <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-medium mb-4">
-            Your <span className="italic text-accent">Favorites</span>
+            {t('favorites.title')}
           </h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             {favoritePerfumes.length > 0
-              ? `You have ${favoritePerfumes.length} ${favoritePerfumes.length === 1 ? 'fragrance' : 'fragrances'} in your collection`
-              : 'Start building your fragrance collection'}
+              ? t(favoritePerfumes.length === 1 ? 'favorites.inCollection' : 'favorites.inCollection_plural', { count: favoritePerfumes.length })
+              : t('favorites.buildCollection')}
           </p>
         </div>
 
@@ -45,12 +47,12 @@ const Favorites = () => {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
               <Heart className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h2 className="font-display text-xl mb-2">No favorites yet</h2>
+            <h2 className="font-display text-xl mb-2">{t('favorites.empty')}</h2>
             <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-              Explore our catalog and click the heart icon to save your favorite fragrances
+              {t('favorites.emptyDesc')}
             </p>
             <Button asChild>
-              <Link to="/">Explore Catalog</Link>
+              <Link to="/">{t('favorites.explore')}</Link>
             </Button>
           </div>
         )}

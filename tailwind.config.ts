@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'serif'],
-        body: ['Inter', 'sans-serif'],
+        display: ['Roboto Condensed', 'sans-serif'],
+        body: ['Roboto', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

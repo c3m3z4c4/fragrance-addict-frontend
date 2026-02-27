@@ -383,8 +383,14 @@ export async function fetchPerfumesByBrand(
     }
 }
 
-// Get all brands
-export async function fetchBrands(): Promise<string[]> {
+export interface BrandInfo {
+    name: string;
+    count: number;
+    imageUrl: string | null;
+}
+
+// Get all brands with image and count
+export async function fetchBrands(): Promise<BrandInfo[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/api/perfumes/brands`);
         if (!response.ok) {
@@ -392,14 +398,14 @@ export async function fetchBrands(): Promise<string[]> {
             return [];
         }
         const data = await response.json();
-
-        // Handle both response formats
-        if (data.data && Array.isArray(data.data)) {
-            return data.data;
-        } else if (data.brands && Array.isArray(data.brands)) {
-            return data.brands;
-        }
-        return Array.isArray(data) ? data : [];
+        const raw = data.data ?? data.brands ?? data;
+        if (!Array.isArray(raw)) return [];
+        // Normalise: backend may return {name, count, imageUrl} or plain strings
+        return raw.map((item: any) =>
+            typeof item === 'string'
+                ? { name: item, count: 0, imageUrl: null }
+                : { name: item.name ?? item, count: item.count ?? 0, imageUrl: item.imageUrl ?? item.image_url ?? null }
+        );
     } catch (error) {
         console.error('❌ Fetch brands error:', error);
         return [];

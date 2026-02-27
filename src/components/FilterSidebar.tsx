@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, X, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,6 +23,7 @@ interface FilterSidebarProps {
 }
 
 export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: FilterSidebarProps) {
+  const { t } = useTranslation();
   const [expandedSections, setExpandedSections] = useState<string[]>(['brands', 'gender', 'family']);
 
   const toggleSection = (section: string) => {
@@ -115,7 +117,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-5 w-5" />
-            <h2 className="font-display text-lg">Filters</h2>
+            <h2 className="font-display text-lg">{t('filter.title')}</h2>
             {activeFiltersCount > 0 && (
               <span className="px-2 py-0.5 bg-accent text-accent-foreground text-xs rounded-full">
                 {activeFiltersCount}
@@ -125,7 +127,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
           <div className="flex items-center gap-2">
             {activeFiltersCount > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-                Clear all
+                {t('filter.clearAll')}
               </Button>
             )}
             <Button
@@ -141,7 +143,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
 
         {/* Filter Sections */}
         <div className="space-y-4">
-          <FilterSection id="brands" title="Brands">
+          <FilterSection id="brands" title={t('filter.brands')}>
             {brands.map((brand) => (
               <label key={brand} className="flex items-center gap-3 cursor-pointer group">
                 <Checkbox
@@ -153,7 +155,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
             ))}
           </FilterSection>
 
-          <FilterSection id="gender" title="Gender">
+          <FilterSection id="gender" title={t('filter.gender')}>
             {genders.map((gender) => (
               <label key={gender} className="flex items-center gap-3 cursor-pointer group">
                 <Checkbox
@@ -165,7 +167,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
             ))}
           </FilterSection>
 
-          <FilterSection id="family" title="Fragrance Family">
+          <FilterSection id="family" title={t('filter.fragranceFamily')}>
             {families.map((family) => (
               <label key={family} className="flex items-center gap-3 cursor-pointer group">
                 <Checkbox
@@ -177,7 +179,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
             ))}
           </FilterSection>
 
-          <FilterSection id="price" title="Price Range">
+          <FilterSection id="price" title={t('filter.priceRange')}>
             <div className="px-2 pt-4">
               <Slider
                 value={filters.priceRange}
@@ -194,7 +196,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
             </div>
           </FilterSection>
 
-          <FilterSection id="rating" title="Minimum Rating">
+          <FilterSection id="rating" title={t('filter.minRating')}>
             <div className="flex gap-2">
               {[0, 4, 4.5, 4.7].map((rating) => (
                 <button
@@ -207,7 +209,7 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onClose }: Fil
                       : "bg-muted hover:bg-secondary"
                   )}
                 >
-                  {rating === 0 ? 'All' : `${rating}+`}
+                  {rating === 0 ? t('filter.all') : `${rating}+`}
                 </button>
               ))}
             </div>

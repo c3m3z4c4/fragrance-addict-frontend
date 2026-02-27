@@ -1,5 +1,6 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 const ITEMS_PER_PAGE = 10;
 
 export default function Search() {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
     const [currentPage, setCurrentPage] = useState(1);
@@ -55,13 +57,13 @@ export default function Search() {
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <div className="text-center py-16">
                         <p className="text-lg text-muted-foreground mb-2">
-                            No search query
+                            {t('search.noQuery')}
                         </p>
                         <p className="text-sm text-muted-foreground/70">
-                            Enter at least 2 characters to search
+                            {t('search.enterChars')}
                         </p>
                         <Link to="/">
-                            <Button className="mt-6">Back to Home</Button>
+                            <Button className="mt-6">{t('common.backHome')}</Button>
                         </Link>
                     </div>
                 </main>
@@ -77,7 +79,7 @@ export default function Search() {
                 <Header />
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <h1 className="font-display text-3xl md:text-4xl font-medium mb-8">
-                        Searching...
+                        {t('search.searching')}
                     </h1>
                     <div className="grid gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
@@ -108,12 +110,12 @@ export default function Search() {
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <div className="text-center py-16">
                         <p className="text-lg text-destructive">
-                            Error loading results
+                            {t('search.errorLoading')}
                         </p>
                         <p className="text-sm text-muted-foreground mt-2">
                             {error instanceof Error
                                 ? error.message
-                                : 'Please try again'}
+                                : t('search.tryAgain')}
                         </p>
                     </div>
                 </main>
@@ -130,13 +132,13 @@ export default function Search() {
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <div className="text-center py-16">
                         <p className="text-lg text-muted-foreground mb-2">
-                            No fragrances found
+                            {t('search.noResults')}
                         </p>
                         <p className="text-sm text-muted-foreground/70">
-                            Try a different search
+                            {t('search.differentSearch')}
                         </p>
                         <Link to="/">
-                            <Button className="mt-6">Back to Home</Button>
+                            <Button className="mt-6">{t('common.backHome')}</Button>
                         </Link>
                     </div>
                 </main>
@@ -152,16 +154,16 @@ export default function Search() {
             <main className="flex-1 container mx-auto px-4 md:px-8 py-12 md:py-16">
                 <div className="mb-12">
                     <h1 className="font-display text-4xl md:text-5xl font-medium mb-3">
-                        Results for "{query}"
+                        {t('search.resultsFor')} "{query}"
                     </h1>
                     <p className="text-muted-foreground text-lg mb-6">
                         {allPerfumes.length}{' '}
-                        {allPerfumes.length === 1 ? 'fragrance' : 'fragrances'}{' '}
-                        found
+                        {allPerfumes.length === 1 ? t('search.fragrance') : t('search.fragrances')}{' '}
+                        {t('search.results')}
                         {totalPages > 1 && (
                             <span className="text-sm">
                                 {' '}
-                                · Showing page {currentPage} of {totalPages}
+                                · {t('search.showingPage')} {currentPage} {t('common.of')} {totalPages}
                             </span>
                         )}
                     </p>
@@ -169,51 +171,35 @@ export default function Search() {
                     {/* Gender Filter */}
                     <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-sm font-semibold text-muted-foreground">
-                            Filter by gender:
+                            {t('search.filterByGender')}
                         </span>
                         <Button
-                            variant={
-                                genderFilter === 'all' ? 'default' : 'outline'
-                            }
+                            variant={genderFilter === 'all' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleGenderFilterChange('all')}
                         >
-                            All
+                            {t('search.all')}
                         </Button>
                         <Button
-                            variant={
-                                genderFilter === 'masculine'
-                                    ? 'default'
-                                    : 'outline'
-                            }
+                            variant={genderFilter === 'masculine' ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() =>
-                                handleGenderFilterChange('masculine')
-                            }
+                            onClick={() => handleGenderFilterChange('masculine')}
                         >
-                            Masculine
+                            {t('search.masculine')}
                         </Button>
                         <Button
-                            variant={
-                                genderFilter === 'feminine'
-                                    ? 'default'
-                                    : 'outline'
-                            }
+                            variant={genderFilter === 'feminine' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleGenderFilterChange('feminine')}
                         >
-                            Feminine
+                            {t('search.feminine')}
                         </Button>
                         <Button
-                            variant={
-                                genderFilter === 'unisex'
-                                    ? 'default'
-                                    : 'outline'
-                            }
+                            variant={genderFilter === 'unisex' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleGenderFilterChange('unisex')}
                         >
-                            Unisex
+                            {t('search.unisex')}
                         </Button>
                     </div>
                 </div>
@@ -293,7 +279,7 @@ export default function Search() {
                                                 <div className="mb-4 pb-4 border-b border-border/50">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="text-sm font-semibold text-accent">
-                                                            Top Notes:
+                                                            {t('search.topNotes')}
                                                         </span>
                                                         {perfume.notes.top
                                                             .slice(0, 3)
@@ -358,7 +344,7 @@ export default function Search() {
                                 className="flex items-center gap-2"
                             >
                                 <ChevronLeft className="h-4 w-4" />
-                                Previous
+                                {t('common.previous')}
                             </Button>
 
                             <div className="flex items-center gap-1 flex-wrap justify-center">
@@ -393,7 +379,7 @@ export default function Search() {
                                 disabled={currentPage === totalPages}
                                 className="flex items-center gap-2"
                             >
-                                Next
+                                {t('common.next')}
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>

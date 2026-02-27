@@ -174,7 +174,7 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="block py-3 text-sm font-medium tracking-wide text-foreground/70 transition-colors hover:text-accent"
                                 >
-                                    API Keys
+                                    {t('nav.apiKeys')}
                                 </Link>
                                 <button
                                     onClick={() => {
