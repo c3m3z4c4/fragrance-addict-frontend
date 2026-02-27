@@ -248,19 +248,6 @@ const PerfumeDetail = () => {
                 projection={perfume.projection}
               />
 
-              {/* Source link */}
-              {perfume.sourceUrl && (
-                <div className="mt-8 pt-6 border-t border-border">
-                  <a
-                    href={perfume.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-accent transition-colors"
-                  >
-                    {t('perfume.viewSource')} →
-                  </a>
-                </div>
-              )}
 
               {/* Accord bars on mobile (below details, since col 3 is hidden on mobile) */}
               {perfume.accords && perfume.accords.length > 0 && (

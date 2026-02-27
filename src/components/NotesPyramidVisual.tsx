@@ -10,6 +10,38 @@ interface NotesPyramidVisualProps {
   className?: string;
 }
 
+type NoteCategory = 'top' | 'heart' | 'base';
+
+const DOT_COLOR: Record<NoteCategory, string> = {
+  top: 'bg-accent/60',
+  heart: 'bg-gold/60',
+  base: 'bg-amber/60',
+};
+
+const LABEL_COLOR: Record<NoteCategory, string> = {
+  top: 'text-accent',
+  heart: 'text-gold',
+  base: 'text-amber',
+};
+
+function NoteCard({ note, category, delay }: { note: string; category: NoteCategory; delay: number }) {
+  return (
+    <div
+      className="opacity-0 animate-fade-in flex flex-col items-center gap-1.5 w-[76px]"
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
+    >
+      {/* Name above */}
+      <span className="text-[11px] font-semibold text-foreground text-center leading-tight line-clamp-3 w-full">
+        {note}
+      </span>
+      {/* White circle */}
+      <div className="w-12 h-12 rounded-full bg-white border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0">
+        <div className={cn('w-2.5 h-2.5 rounded-full', DOT_COLOR[category])} />
+      </div>
+    </div>
+  );
+}
+
 export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps) {
   const { t } = useTranslation();
   const topNotes = [...new Set(notes?.top || [])];
@@ -20,86 +52,37 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
     return null;
   }
 
-  return (
-    <div className={cn("space-y-6", className)}>
-      <h3 className="font-display text-2xl font-medium">{t('notes.topNotes').split(' ')[0]} {t('notes.topNotes').includes('Notes') ? 'Notes' : ''}</h3>
-      
-      <div className="relative">
-        {/* Pyramid visualization */}
-        <div className="flex flex-col items-center gap-4">
-          {/* Top Notes */}
-          {topNotes.length > 0 && (
-            <div className="w-full max-w-md animate-fade-in">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-1 h-8 rounded-full bg-gradient-to-b from-accent to-accent/50" />
-                <div>
-                  <p className="text-sm uppercase tracking-wider text-accent font-medium">{t('notes.topNotes')}</p>
-                  <p className="text-xs text-muted-foreground">(0-30 min)</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 pl-4">
-                {topNotes.map((note, i) => (
-                  <span
-                    key={`top-${i}`}
-                    className="px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-sm text-foreground hover:bg-accent/20 transition-colors cursor-default"
-                    style={{ animationDelay: `${i * 50}ms` }}
-                  >
-                    {note}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Heart Notes */}
-          {heartNotes.length > 0 && (
-            <div className="w-full max-w-lg animate-fade-in animation-delay-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-1 h-8 rounded-full bg-gradient-to-b from-gold to-gold/50" />
-                <div>
-                  <p className="text-sm uppercase tracking-wider text-gold font-medium">{t('notes.heartNotes')}</p>
-                  <p className="text-xs text-muted-foreground">(30 min - 4 hrs)</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 pl-4">
-                {heartNotes.map((note, i) => (
-                  <span
-                    key={`heart-${i}`}
-                    className="px-3 py-1.5 bg-gold/10 border border-gold/20 rounded-full text-sm text-foreground hover:bg-gold/20 transition-colors cursor-default"
-                    style={{ animationDelay: `${i * 50 + 100}ms` }}
-                  >
-                    {note}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Base Notes */}
-          {baseNotes.length > 0 && (
-            <div className="w-full max-w-xl animate-fade-in animation-delay-200">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-1 h-8 rounded-full bg-gradient-to-b from-amber to-amber/50" />
-                <div>
-                  <p className="text-sm uppercase tracking-wider text-amber font-medium">{t('notes.baseNotes')}</p>
-                  <p className="text-xs text-muted-foreground">(4+ hrs)</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 pl-4">
-                {baseNotes.map((note, i) => (
-                  <span
-                    key={`base-${i}`}
-                    className="px-3 py-1.5 bg-amber/10 border border-amber/20 rounded-full text-sm text-foreground hover:bg-amber/20 transition-colors cursor-default"
-                    style={{ animationDelay: `${i * 50 + 200}ms` }}
-                  >
-                    {note}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+  const renderSection = (
+    noteList: string[],
+    category: NoteCategory,
+    label: string,
+    baseDelay: number
+  ) => {
+    if (!noteList.length) return null;
+    return (
+      <div>
+        <p className={cn('text-xs uppercase tracking-widest font-semibold mb-4', LABEL_COLOR[category])}>
+          {label}
+        </p>
+        <div className="flex flex-wrap gap-4">
+          {noteList.map((note, i) => (
+            <NoteCard
+              key={`${category}-${i}`}
+              note={note}
+              category={category}
+              delay={baseDelay + i * 40}
+            />
+          ))}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className={cn('space-y-7', className)}>
+      {renderSection(topNotes, 'top', t('notes.topNotes'), 0)}
+      {renderSection(heartNotes, 'heart', t('notes.heartNotes'), 100)}
+      {renderSection(baseNotes, 'base', t('notes.baseNotes'), 200)}
     </div>
   );
 }

@@ -79,7 +79,7 @@ export const translations = {
       // Notes Pyramid
       notes: {
         topNotes: 'Top Notes',
-        heartNotes: 'Heart Notes',
+        heartNotes: 'Middle Notes',
         baseNotes: 'Base Notes',
       },
       // Performance
@@ -254,7 +254,7 @@ export const translations = {
       // Notes Pyramid
       notes: {
         topNotes: 'Notas de Salida',
-        heartNotes: 'Notas de Corazón',
+        heartNotes: 'Notas Medias',
         baseNotes: 'Notas de Fondo',
       },
       // Performance
