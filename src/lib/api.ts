@@ -45,10 +45,9 @@ const getApiBaseUrl = (): string => {
             }
         }
 
-        // 3. URL pública/producción - usar dominio traefik
-        const fallback =
-            'https://fragranceadict-backend-0tf5vy-debd22-31-97-41-99.traefik.me';
-        console.log('📍 Using production API URL:', fallback);
+        // 3. URL pública/producción — configura VITE_API_URL en el build
+        const fallback = 'http://localhost:3000';
+        console.warn('⚠️ VITE_API_URL not set, falling back to:', fallback);
         return fallback;
     } catch (error) {
         console.error('❌ Error determining API_BASE_URL:', error);
@@ -817,5 +816,57 @@ export async function addIncompleteToQueue(limit = 50): Promise<{
         };
     }
 
+    return response.json();
+}
+
+// ============= METRICS FUNCTIONS =============
+
+export interface MetricsData {
+    timestamp: string;
+    uptime: number;
+    system: {
+        memory: {
+            rss: number;
+            heapTotal: number;
+            heapUsed: number;
+            external: number;
+            rssMB: string;
+            heapTotalMB: string;
+            heapUsedMB: string;
+        };
+        cpu: {
+            loadAvg1m: number;
+            loadAvg5m: number;
+            loadAvg15m: number;
+            cores: number;
+            avgPercent: string;
+        };
+    };
+    traffic: {
+        totalRequests: number;
+        rpm: string;
+        byMethod: Record<string, number>;
+        byStatus: Record<string, number>;
+        topRoutes: Array<{ route: string; count: number }>;
+    };
+    latency: {
+        avg: string;
+        min: string;
+        max: string;
+        p50: string;
+        p95: string;
+        p99: string;
+        samples: number;
+    };
+}
+
+// Fetch backend metrics (protegido con API key)
+export async function fetchMetrics(): Promise<MetricsData> {
+    const response = await fetch(`${API_BASE_URL}/metrics`, {
+        headers: {
+            'x-api-key': getApiKey(),
+        },
+    });
+    if (!response.ok) throw new Error('Failed to fetch metrics');
     return response.json();
 }

@@ -6,8 +6,9 @@ import { ScraperPanel } from '@/components/admin/ScraperPanel';
 import { SitemapImporter } from '@/components/admin/SitemapImporter';
 import { RescrapePanel } from '@/components/admin/RescrapePanel';
 import { AdminStats } from '@/components/admin/AdminStats';
+import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2, RefreshCw } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2, RefreshCw, Activity } from 'lucide-react';
 import { useAdminApiKey } from '@/hooks/useAdminApiKey';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -131,7 +132,7 @@ export default function Admin() {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -147,6 +148,10 @@ export default function Admin() {
             <TabsTrigger value="rescrape" className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               <span className="hidden sm:inline">Re-Scrape</span>
+            </TabsTrigger>
+            <TabsTrigger value="metrics" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Metrics</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -168,6 +173,10 @@ export default function Admin() {
 
           <TabsContent value="rescrape" className="animate-fade-in">
             <RescrapePanel />
+          </TabsContent>
+
+          <TabsContent value="metrics" className="animate-fade-in">
+            <MetricsDashboard />
           </TabsContent>
 
           <TabsContent value="stats" className="animate-fade-in">
