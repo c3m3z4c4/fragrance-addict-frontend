@@ -7,19 +7,16 @@ import { SitemapImporter } from '@/components/admin/SitemapImporter';
 import { RescrapePanel } from '@/components/admin/RescrapePanel';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
+import { UserManagement } from '@/components/admin/UserManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Key, Check, X, Wifi, WifiOff, Loader2, RefreshCw, Activity } from 'lucide-react';
-import { useAdminApiKey } from '@/hooks/useAdminApiKey';
-import { Input } from '@/components/ui/input';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('perfumes');
-  const { apiKey, saveApiKey, clearApiKey, isConfigured } = useAdminApiKey();
-  const [inputKey, setInputKey] = useState(apiKey);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
   const checkBackend = async () => {
@@ -38,101 +35,56 @@ export default function Admin() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSaveKey = () => {
-    if (inputKey.trim()) {
-      saveApiKey(inputKey.trim());
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl md:text-4xl font-medium mb-2">
-            Admin Panel
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your perfume catalog and scraping operations
-          </p>
-        </div>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="font-display text-3xl md:text-4xl font-medium mb-2">
+              Admin Panel
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your perfume catalog and scraping operations
+            </p>
+          </div>
 
-        {/* API Key Configuration */}
-        <Card className="mb-6">
-          <CardHeader className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                <CardTitle className="text-base">API Key</CardTitle>
-                {isConfigured ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">
-                    <Check className="h-3 w-3" /> Configured
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
-                    <X className="h-3 w-3" /> Not configured
-                  </span>
-                )}
-              </div>
-              {/* Backend Status Indicator */}
+          {/* Backend Status */}
+          <Card className="flex-shrink-0">
+            <CardHeader className="py-2 px-4">
               <div className="flex items-center gap-2">
                 {backendStatus === 'checking' && (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Checking...
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Checking…
                   </span>
                 )}
                 {backendStatus === 'online' && (
-                  <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-1 rounded-full">
-                    <Wifi className="h-3 w-3" />
-                    Backend Online
+                  <span className="flex items-center gap-1.5 text-xs text-green-600">
+                    <Wifi className="h-3 w-3" /> Backend Online
                   </span>
                 )}
                 {backendStatus === 'offline' && (
-                  <span className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-2.5 py-1 rounded-full">
-                    <WifiOff className="h-3 w-3" />
-                    Backend Offline
+                  <span className="flex items-center gap-1.5 text-xs text-destructive">
+                    <WifiOff className="h-3 w-3" /> Backend Offline
                   </span>
                 )}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7" 
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
                   onClick={checkBackend}
                   disabled={backendStatus === 'checking'}
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
-            </div>
-            <CardDescription>
-              Enter your backend API key to access admin functions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="py-3">
-            <div className="flex gap-2">
-              <Input
-                type="password"
-                placeholder="Enter API key..."
-                value={inputKey}
-                onChange={(e) => setInputKey(e.target.value)}
-                className="max-w-md"
-              />
-              <Button onClick={handleSaveKey} disabled={!inputKey.trim()}>
-                Save
-              </Button>
-              {isConfigured && (
-                <Button variant="outline" onClick={clearApiKey}>
-                  Clear
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+          </Card>
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+          <TabsList className="grid w-full max-w-4xl grid-cols-7">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -156,6 +108,10 @@ export default function Admin() {
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
           </TabsList>
 
@@ -181,6 +137,10 @@ export default function Admin() {
 
           <TabsContent value="stats" className="animate-fade-in">
             <AdminStats />
+          </TabsContent>
+
+          <TabsContent value="users" className="animate-fade-in">
+            <UserManagement />
           </TabsContent>
         </Tabs>
       </main>

@@ -431,9 +431,9 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
 
 // ============= ADMIN FUNCTIONS (Protected) =============
 
-import { getStoredApiKey } from '@/hooks/useAdminApiKey';
+import { getAuthToken } from '@/contexts/AuthContext';
 
-const getApiKey = () => getStoredApiKey();
+const getAuthHeader = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
 // Scrape a perfume from URL
 export async function scrapePerfume(
@@ -446,7 +446,7 @@ export async function scrapePerfume(
         )}&save=${save}`,
         {
             headers: {
-                'x-api-key': getApiKey(),
+                ...getAuthHeader(),
             },
         }
     );
@@ -480,7 +480,7 @@ export async function batchScrapePerfumes(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ urls, save }),
     });
@@ -506,7 +506,7 @@ export async function deletePerfume(
     const response = await fetch(`${API_BASE_URL}/api/perfumes/${id}`, {
         method: 'DELETE',
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
 
@@ -528,7 +528,7 @@ export async function getCacheStats(): Promise<{
 }> {
     const response = await fetch(`${API_BASE_URL}/api/scrape/cache/stats`, {
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
     if (!response.ok) throw new Error('Failed to fetch cache stats');
@@ -541,7 +541,7 @@ export async function clearCache(): Promise<{ success: boolean }> {
     const response = await fetch(`${API_BASE_URL}/api/scrape/cache`, {
         method: 'DELETE',
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
     if (!response.ok) throw new Error('Failed to clear cache');
@@ -575,7 +575,7 @@ export async function fetchSitemapUrls(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ brand, limit }),
     });
@@ -608,7 +608,7 @@ export async function checkExistingUrls(urls: string[]): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ urls }),
     });
@@ -634,7 +634,7 @@ export async function addToQueue(urls: string[]): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ urls }),
     });
@@ -661,7 +661,7 @@ export async function startQueue(): Promise<{
     const response = await fetch(`${API_BASE_URL}/api/scrape/queue/start`, {
         method: 'POST',
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
 
@@ -686,7 +686,7 @@ export async function stopQueue(): Promise<{
     const response = await fetch(`${API_BASE_URL}/api/scrape/queue/stop`, {
         method: 'POST',
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
 
@@ -698,7 +698,7 @@ export async function stopQueue(): Promise<{
 export async function getQueueStatus(): Promise<QueueStatus> {
     const response = await fetch(`${API_BASE_URL}/api/scrape/queue/status`, {
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
 
@@ -712,7 +712,7 @@ export async function clearQueue(): Promise<{ success: boolean }> {
     const response = await fetch(`${API_BASE_URL}/api/scrape/queue`, {
         method: 'DELETE',
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
 
@@ -743,7 +743,7 @@ export async function getIncompletePerfumes(limit = 50): Promise<{
         `${API_BASE_URL}/api/scrape/incomplete?limit=${limit}`,
         {
             headers: {
-                'x-api-key': getApiKey(),
+                ...getAuthHeader(),
             },
         }
     );
@@ -774,7 +774,7 @@ export async function rescrapePerfumes(ids: string[]): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ ids }),
     });
@@ -801,7 +801,7 @@ export async function addIncompleteToQueue(limit = 50): Promise<{
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
         body: JSON.stringify({ limit }),
     });
@@ -860,13 +860,64 @@ export interface MetricsData {
     };
 }
 
-// Fetch backend metrics (protegido con API key)
+// Fetch backend metrics (protected with JWT)
 export async function fetchMetrics(): Promise<MetricsData> {
     const response = await fetch(`${API_BASE_URL}/metrics`, {
         headers: {
-            'x-api-key': getApiKey(),
+            ...getAuthHeader(),
         },
     });
     if (!response.ok) throw new Error('Failed to fetch metrics');
     return response.json();
+}
+
+// ============= FAVORITES FUNCTIONS =============
+
+export async function fetchFavorites(): Promise<APIPerfume[]> {
+    const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+        headers: { ...getAuthHeader() },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.favorites || []).map((p: any) => deepSanitizePerfume(p));
+}
+
+export async function addFavorite(perfumeId: string): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/favorites/${perfumeId}`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+    });
+    return response.ok;
+}
+
+export async function removeFavorite(perfumeId: string): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/favorites/${perfumeId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() },
+    });
+    return response.ok;
+}
+
+// ============= USER MANAGEMENT (SuperAdmin) =============
+
+export async function fetchUsers(): Promise<Array<{
+    id: string; email: string; name: string | null;
+    avatar_url: string | null; role: string; provider: string;
+    is_active: boolean; created_at: string;
+}>> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/users`, {
+        headers: { ...getAuthHeader() },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.users || [];
+}
+
+export async function updateUserRole(userId: string, role: 'SUPERADMIN' | 'USER'): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ role }),
+    });
+    return response.ok;
 }

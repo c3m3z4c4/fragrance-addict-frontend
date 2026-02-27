@@ -7,123 +7,105 @@ import React, {
 } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 
+export interface AuthUser {
+    id: string;
+    email: string;
+    name: string | null;
+    avatarUrl: string | null;
+    role: 'SUPERADMIN' | 'USER';
+    provider: string;
+}
+
 interface AuthContextType {
-    isAdmin: boolean;
-    apiKey: string | null;
+    user: AuthUser | null;
     isLoading: boolean;
-    login: (apiKey: string) => Promise<boolean>;
+    isSuperAdmin: boolean;
+    /** Legacy alias — used by components that check isAdmin */
+    isAdmin: boolean;
+    login: (email: string, password: string) => Promise<boolean>;
+    loginWithGoogle: () => void;
     logout: () => void;
-    setApiKey: (key: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_KEY_STORAGE = 'fragrance_admin_key';
-const API_KEY_STORAGE = 'apiKey';
+export const AUTH_TOKEN_KEY = 'fragrance_auth_token';
+
+export function getAuthToken(): string {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || '';
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [apiKey, setApiKeyState] = useState<string | null>(null);
+    const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Validate API key against backend
-    const validateApiKey = async (key: string): Promise<boolean> => {
+    // Verify stored JWT on mount
+    useEffect(() => {
+        const token = getAuthToken();
+        if (!token) {
+            setIsLoading(false);
+            return;
+        }
+
+        fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(async (res) => {
+                if (res.ok) {
+                    const { user } = await res.json();
+                    setUser(user);
+                } else {
+                    localStorage.removeItem(AUTH_TOKEN_KEY);
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+            })
+            .finally(() => setIsLoading(false));
+    }, []);
+
+    const login = async (email: string, password: string): Promise<boolean> => {
+        setIsLoading(true);
         try {
-            console.log(
-                '🔐 Validating API key against:',
-                `${API_BASE_URL}/api/auth/validate`
-            );
-
-            const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
-                headers: {
-                    'x-api-key': key,
-                },
+            const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
             });
-
-            if (response.ok) {
-                console.log('✅ API key is valid');
-                return true;
-            } else {
-                const errorData = await response
-                    .json()
-                    .catch(() => ({ error: 'Unknown error' }));
-                console.error(
-                    '❌ API key validation failed:',
-                    response.status,
-                    errorData
-                );
-                return false;
-            }
-        } catch (error) {
-            console.error('❌ Connection error during validation:', error);
+            if (!res.ok) return false;
+            const { token, user } = await res.json();
+            localStorage.setItem(AUTH_TOKEN_KEY, token);
+            setUser(user);
+            return true;
+        } catch {
             return false;
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    // Check stored keys on mount
-    useEffect(() => {
-        const checkStoredKeys = async () => {
-            // Check admin key
-            const storedAdminKey = localStorage.getItem(ADMIN_KEY_STORAGE);
-            if (storedAdminKey) {
-                console.log('🔍 Checking stored admin API key...');
-                const isValid = await validateApiKey(storedAdminKey);
-                setIsAdmin(isValid);
-                if (!isValid) {
-                    console.log('🗑️ Removing invalid stored admin key');
-                    localStorage.removeItem(ADMIN_KEY_STORAGE);
-                }
-            }
-
-            // Check regular API key
-            const storedApiKey = localStorage.getItem(API_KEY_STORAGE);
-            if (storedApiKey) {
-                console.log('🔍 Checking stored API key...');
-                const isValid = await validateApiKey(storedApiKey);
-                if (isValid) {
-                    setApiKeyState(storedApiKey);
-                } else {
-                    console.log('🗑️ Removing invalid stored API key');
-                    localStorage.removeItem(API_KEY_STORAGE);
-                }
-            }
-
-            setIsLoading(false);
-        };
-        checkStoredKeys();
-    }, []);
-
-    const login = async (key: string): Promise<boolean> => {
-        setIsLoading(true);
-        const isValid = await validateApiKey(key);
-        if (isValid) {
-            localStorage.setItem(ADMIN_KEY_STORAGE, key);
-            setIsAdmin(true);
-        }
-        setIsLoading(false);
-        return isValid;
+    const loginWithGoogle = () => {
+        window.location.href = `${API_BASE_URL}/api/auth/google`;
     };
 
     const logout = () => {
-        localStorage.removeItem(ADMIN_KEY_STORAGE);
-        localStorage.removeItem(API_KEY_STORAGE);
-        setIsAdmin(false);
-        setApiKeyState(null);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setUser(null);
     };
 
-    const setApiKey = (key: string | null) => {
-        if (key) {
-            localStorage.setItem(API_KEY_STORAGE, key);
-            setApiKeyState(key);
-        } else {
-            localStorage.removeItem(API_KEY_STORAGE);
-            setApiKeyState(null);
-        }
-    };
+    const isSuperAdmin = user?.role === 'SUPERADMIN';
 
     return (
         <AuthContext.Provider
-            value={{ isAdmin, apiKey, isLoading, login, logout, setApiKey }}
+            value={{
+                user,
+                isLoading,
+                isSuperAdmin,
+                isAdmin: isSuperAdmin,
+                login,
+                loginWithGoogle,
+                logout,
+            }}
         >
             {children}
         </AuthContext.Provider>
@@ -138,10 +120,11 @@ export function useAuth() {
     return context;
 }
 
+// Legacy helpers kept for backward compatibility with existing hooks/components
 export function getStoredAdminKey(): string {
-    return localStorage.getItem(ADMIN_KEY_STORAGE) || '';
+    return getAuthToken();
 }
 
 export function getStoredApiKey(): string {
-    return localStorage.getItem(API_KEY_STORAGE) || '';
+    return getAuthToken();
 }
