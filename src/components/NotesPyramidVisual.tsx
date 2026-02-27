@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useNoteImage } from '@/hooks/useNoteImage';
 
 interface NotesPyramidVisualProps {
   notes: {
@@ -12,32 +14,67 @@ interface NotesPyramidVisualProps {
 
 type NoteCategory = 'top' | 'heart' | 'base';
 
-const DOT_COLOR: Record<NoteCategory, string> = {
-  top: 'bg-accent/60',
-  heart: 'bg-gold/60',
-  base: 'bg-amber/60',
-};
-
 const LABEL_COLOR: Record<NoteCategory, string> = {
   top: 'text-accent',
   heart: 'text-gold',
   base: 'text-amber',
 };
 
-function NoteCard({ note, category, delay }: { note: string; category: NoteCategory; delay: number }) {
+const PLACEHOLDER_BG: Record<NoteCategory, string> = {
+  top: 'bg-accent/10',
+  heart: 'bg-gold/10',
+  base: 'bg-amber/10',
+};
+
+const PLACEHOLDER_TEXT: Record<NoteCategory, string> = {
+  top: 'text-accent/60',
+  heart: 'text-gold/60',
+  base: 'text-amber/60',
+};
+
+function NoteCard({
+  note,
+  category,
+  delay,
+}: {
+  note: string;
+  category: NoteCategory;
+  delay: number;
+}) {
+  const imageUrl = useNoteImage(note);
+  const [imgError, setImgError] = useState(false);
+  const showImage = imageUrl && !imgError;
+
   return (
     <div
       className="opacity-0 animate-fade-in flex flex-col items-center gap-1.5 w-[76px]"
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
     >
-      {/* Name above */}
-      <span className="text-[11px] font-semibold text-foreground text-center leading-tight line-clamp-3 w-full">
+      {/* Image / placeholder */}
+      <div
+        className={cn(
+          'w-[72px] h-[72px] rounded-2xl overflow-hidden border border-border/30 shadow-sm flex items-center justify-center',
+          showImage ? 'bg-white' : PLACEHOLDER_BG[category]
+        )}
+      >
+        {showImage ? (
+          <img
+            src={imageUrl}
+            alt={note}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span className={cn('text-lg font-semibold select-none', PLACEHOLDER_TEXT[category])}>
+            {note.charAt(0).toUpperCase()}
+          </span>
+        )}
+      </div>
+
+      {/* Note name below */}
+      <span className="text-[11px] font-medium text-foreground text-center leading-tight line-clamp-2 w-full">
         {note}
       </span>
-      {/* White circle */}
-      <div className="w-12 h-12 rounded-full bg-white border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0">
-        <div className={cn('w-2.5 h-2.5 rounded-full', DOT_COLOR[category])} />
-      </div>
     </div>
   );
 }

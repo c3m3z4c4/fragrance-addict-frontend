@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import {
     Loader2,
     Play,
+    Pause,
     Square,
     X,
     Plus,
@@ -284,8 +285,8 @@ export function BrandScraper() {
                         <CardTitle className="text-base">Queue Status</CardTitle>
                         <div className="flex gap-2">
                             {queueStatus?.processing ? (
-                                <Button size="sm" variant="destructive" onClick={handleStopQueue}>
-                                    <Square className="h-3.5 w-3.5 mr-1" /> Stop
+                                <Button size="sm" variant="outline" onClick={handleStopQueue} className="border-amber text-amber hover:bg-amber/10">
+                                    <Pause className="h-3.5 w-3.5 mr-1" /> Pausar
                                 </Button>
                             ) : (
                                 <Button
@@ -293,21 +294,26 @@ export function BrandScraper() {
                                     onClick={handleStartQueue}
                                     disabled={!queueStatus?.remaining}
                                 >
-                                    <Play className="h-3.5 w-3.5 mr-1" /> Start Queue
+                                    <Play className="h-3.5 w-3.5 mr-1" />
+                                    {queueStatus?.remaining ? 'Reanudar' : 'Iniciar cola'}
                                 </Button>
                             )}
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {queueStatus?.processing && (
+                    {queueStatus?.processing ? (
                         <>
                             <Progress value={progress} className="h-2" />
                             <p className="text-xs text-muted-foreground truncate">
-                                Processing: {queueStatus.current || '…'}
+                                Procesando: {queueStatus.current || '…'}
                             </p>
                         </>
-                    )}
+                    ) : queueStatus?.remaining ? (
+                        <p className="text-xs text-amber font-medium">
+                            ⏸ Cola pausada — {queueStatus.remaining} perfumes pendientes
+                        </p>
+                    ) : null}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                         {[
                             { label: 'Processed', value: queueStatus?.processed ?? 0, color: 'text-green-600' },

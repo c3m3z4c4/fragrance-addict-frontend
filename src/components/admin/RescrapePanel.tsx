@@ -206,28 +206,22 @@ export function RescrapePanel() {
                     <p className="text-sm text-muted-foreground truncate">{perfume.brand}</p>
                   </div>
                   
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Badge 
-                      variant={perfume.hasSillage ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {perfume.hasSillage ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                      <span className="ml-1">Sillage</span>
-                    </Badge>
-                    <Badge 
-                      variant={perfume.hasLongevity ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {perfume.hasLongevity ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                      <span className="ml-1">Duración</span>
-                    </Badge>
-                    <Badge 
-                      variant={perfume.hasSimilarPerfumes ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {perfume.hasSimilarPerfumes ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                      <span className="ml-1">Similares</span>
-                    </Badge>
+                  <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
+                    {([
+                      { label: 'Notas', has: perfume.hasNotes },
+                      { label: 'Acordes', has: perfume.hasAccords },
+                      { label: 'Sillage', has: perfume.hasSillage },
+                      { label: 'Duración', has: perfume.hasLongevity },
+                    ] as const).map(({ label, has }) => (
+                      <Badge
+                        key={label}
+                        variant={has ? 'default' : 'destructive'}
+                        className="text-xs"
+                      >
+                        {has ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        <span className="ml-1">{label}</span>
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               ))}

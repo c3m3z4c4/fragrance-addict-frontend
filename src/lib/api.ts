@@ -736,6 +736,8 @@ export interface IncompletePerfume {
     hasSillage: boolean;
     hasLongevity: boolean;
     hasSimilarPerfumes: boolean;
+    hasNotes: boolean;
+    hasAccords: boolean;
 }
 
 // Get incomplete perfumes that need re-scraping
