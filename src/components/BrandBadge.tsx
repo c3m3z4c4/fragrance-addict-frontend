@@ -34,7 +34,7 @@ export function BrandBadge({ brand, imageUrl, className }: BrandBadgeProps) {
 
     return (
         <Link
-            to={`/?brand=${encodeURIComponent(brand)}`}
+            to={`/brands/${encodeURIComponent(brand)}`}
             className={`group flex flex-col items-center gap-3 ${className ?? ''}`}
             title={`Ver todos los perfumes de ${brand}`}
         >

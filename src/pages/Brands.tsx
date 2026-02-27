@@ -40,7 +40,7 @@ const Brands = () => {
             : brands.map((brand, index) => (
                 <Link
                   key={brand.name}
-                  to={`/?brand=${encodeURIComponent(brand.name)}`}
+                  to={`/brands/${encodeURIComponent(brand.name)}`}
                   className={cn(
                     'group relative aspect-[4/3] rounded-lg overflow-hidden opacity-0 animate-fade-in',
                     'hover-lift luxury-border'

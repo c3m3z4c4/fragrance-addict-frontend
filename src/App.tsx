@@ -9,6 +9,7 @@ import Index from './pages/Index';
 import PerfumeDetail from './pages/PerfumeDetail';
 import Favorites from './pages/Favorites';
 import Brands from './pages/Brands';
+import BrandDetail from './pages/BrandDetail';
 import About from './pages/About';
 import Search from './pages/Search';
 import { SearchDebug } from './pages/SearchDebug';
@@ -30,22 +31,25 @@ const queryClient = new QueryClient({
     },
 });
 
-// Protected route component
+const LoadingSpinner = () => (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+);
+
+// Requires any authenticated user (USER or SUPERADMIN)
+function RequireAuth({ children }: { children: React.ReactNode }) {
+    const { user, isLoading } = useAuth();
+    if (isLoading) return <LoadingSpinner />;
+    if (!user) return <Navigate to="/login" replace />;
+    return <>{children}</>;
+}
+
+// Requires SUPERADMIN
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { isAdmin, isLoading } = useAuth();
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
-
-    if (!isAdmin) {
-        return <Navigate to="/login" replace />;
-    }
-
+    if (isLoading) return <LoadingSpinner />;
+    if (!isAdmin) return <Navigate to="/login" replace />;
     return <>{children}</>;
 }
 
@@ -56,8 +60,16 @@ function AppRoutes() {
             <Route path="/search" element={<Search />} />
             <Route path="/search-debug" element={<SearchDebug />} />
             <Route path="/perfume/:id" element={<PerfumeDetail />} />
-            <Route path="/favorites" element={<Favorites />} />
+            <Route
+                path="/favorites"
+                element={
+                    <RequireAuth>
+                        <Favorites />
+                    </RequireAuth>
+                }
+            />
             <Route path="/brands" element={<Brands />} />
+            <Route path="/brands/:brand" element={<BrandDetail />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
