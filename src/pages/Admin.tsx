@@ -8,8 +8,9 @@ import { RescrapePanel } from '@/components/admin/RescrapePanel';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { BrandScraper } from '@/components/admin/BrandScraper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -84,7 +85,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-7">
+          <TabsList className="grid w-full max-w-5xl grid-cols-8">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -112,6 +113,10 @@ export default function Admin() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="brands" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              <span className="hidden sm:inline">Brands</span>
             </TabsTrigger>
           </TabsList>
 
@@ -141,6 +146,10 @@ export default function Admin() {
 
           <TabsContent value="users" className="animate-fade-in">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="brands" className="animate-fade-in">
+            <BrandScraper />
           </TabsContent>
         </Tabs>
       </main>

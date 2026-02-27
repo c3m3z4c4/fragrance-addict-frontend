@@ -921,3 +921,65 @@ export async function updateUserRole(userId: string, role: 'SUPERADMIN' | 'USER'
     });
     return response.ok;
 }
+
+// ============= BRAND SCRAPING =============
+
+export interface BrandScrapeResult {
+    success: boolean;
+    brand: string;
+    brandUrl?: string;
+    total: number;
+    queued: number;
+    skipped: number;
+    queueSize?: number;
+    autoStarted?: boolean;
+    error?: string;
+}
+
+export interface BrandsScrapeResult {
+    success: boolean;
+    brands: Array<{
+        brand: string;
+        brandUrl?: string;
+        total?: number;
+        queued: number;
+        skipped?: number;
+        error?: string;
+    }>;
+    totalQueued: number;
+    totalSkipped: number;
+    queueSize: number;
+    autoStarted: boolean;
+}
+
+export async function scrapeBrand(
+    brand: string,
+    options: { limit?: number; autoStart?: boolean } = {}
+): Promise<BrandScrapeResult> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape/brand`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ brand, limit: options.limit ?? 500, autoStart: options.autoStart ?? false }),
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Failed to scrape brand' }));
+        return { success: false, brand, total: 0, queued: 0, skipped: 0, error: err.error };
+    }
+    return response.json();
+}
+
+export async function scrapeBrands(
+    brands: string[],
+    options: { limitPerBrand?: number; autoStart?: boolean } = {}
+): Promise<BrandsScrapeResult> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape/brands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ brands, limitPerBrand: options.limitPerBrand ?? 500, autoStart: options.autoStart ?? false }),
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Failed to scrape brands' }));
+        throw new Error(err.error || 'Failed to scrape brands');
+    }
+    return response.json();
+}
