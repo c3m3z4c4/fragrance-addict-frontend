@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +7,84 @@ import { Footer } from '@/components/Footer';
 import { fetchBrands } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useBrandLogo } from '@/hooks/useBrandLogo';
+
+// Derive a consistent hue from brand name for the monogram fallback
+function brandHue(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
+interface BrandCardProps {
+  name: string;
+  count: number;
+  index: number;
+}
+
+function BrandCard({ name, count, index }: BrandCardProps) {
+  const { t } = useTranslation();
+  const logoUrl = useBrandLogo(name);
+  const [imgError, setImgError] = useState(false);
+  const showLogo = logoUrl && !imgError;
+  const hue = brandHue(name);
+  const initials = getInitials(name);
+
+  return (
+    <Link
+      to={`/brands/${encodeURIComponent(name)}`}
+      className={cn(
+        'group rounded-lg overflow-hidden opacity-0 animate-fade-in',
+        'border border-border/60 hover:border-accent/40 hover-lift',
+        'transition-all duration-300'
+      )}
+      style={{
+        animationDelay: `${index * 60}ms`,
+        animationFillMode: 'forwards',
+      }}
+    >
+      {/* Logo area — white background contrasts with most brand logos */}
+      <div className="aspect-[4/3] flex items-center justify-center bg-white p-8 overflow-hidden">
+        {showLogo ? (
+          <img
+            src={logoUrl}
+            alt={name}
+            className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span
+            className="font-display text-4xl font-bold tracking-widest select-none transition-colors duration-300 group-hover:text-accent"
+            style={{ color: `hsl(${hue} 40% 30%)` }}
+          >
+            {initials}
+          </span>
+        )}
+      </div>
+
+      {/* Brand info */}
+      <div className="px-4 py-3 border-t border-border/40 bg-background">
+        <h2 className="font-display text-base font-medium truncate">{name}</h2>
+        {count > 0 && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {count} {count === 1 ? t('brands.fragrance') : t('brands.fragrances')}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
 
 const Brands = () => {
   const { t } = useTranslation();
@@ -38,42 +117,12 @@ const Brands = () => {
                 <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
               ))
             : brands.map((brand, index) => (
-                <Link
+                <BrandCard
                   key={brand.name}
-                  to={`/brands/${encodeURIComponent(brand.name)}`}
-                  className={cn(
-                    'group relative aspect-[4/3] rounded-lg overflow-hidden opacity-0 animate-fade-in',
-                    'hover-lift luxury-border'
-                  )}
-                  style={{
-                    animationDelay: `${index * 80}ms`,
-                    animationFillMode: 'forwards',
-                  }}
-                >
-                  {/* Background Image */}
-                  {brand.imageUrl ? (
-                    <img
-                      src={brand.imageUrl}
-                      alt={brand.name}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-secondary to-muted" />
-                  )}
-
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/30 to-transparent" />
-
-                  {/* Content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-primary-foreground">
-                    <h2 className="font-display text-2xl font-medium mb-1">{brand.name}</h2>
-                    {brand.count > 0 && (
-                      <p className="text-sm text-primary-foreground/70">
-                        {brand.count} {brand.count === 1 ? t('brands.fragrance') : t('brands.fragrances')}
-                      </p>
-                    )}
-                  </div>
-                </Link>
+                  name={brand.name}
+                  count={brand.count}
+                  index={index}
+                />
               ))}
         </div>
       </main>

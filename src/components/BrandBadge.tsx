@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { useBrandLogo } from '@/hooks/useBrandLogo';
 
 interface BrandBadgeProps {
     brand: string;
-    imageUrl?: string | null;
     className?: string;
 }
 
@@ -16,7 +16,6 @@ function getInitials(name: string): string {
         .join('');
 }
 
-// Derive a subtle hue from brand name for the gradient accent
 function brandHue(name: string): number {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -25,12 +24,13 @@ function brandHue(name: string): number {
     return Math.abs(hash) % 360;
 }
 
-export function BrandBadge({ brand, imageUrl, className }: BrandBadgeProps) {
+export function BrandBadge({ brand, className }: BrandBadgeProps) {
     const initials = getInitials(brand);
     const hue = brandHue(brand);
+    const logoUrl = useBrandLogo(brand);
     const [imgError, setImgError] = useState(false);
 
-    const showImage = imageUrl && !imgError;
+    const showImage = logoUrl && !imgError;
 
     return (
         <Link
@@ -40,20 +40,13 @@ export function BrandBadge({ brand, imageUrl, className }: BrandBadgeProps) {
         >
             {/* Badge container */}
             <div
-                className="relative w-20 h-20 rounded-sm flex items-center justify-center border border-border/60 overflow-hidden transition-all duration-500 group-hover:border-accent/40 group-hover:shadow-lg"
-                style={
-                    showImage
-                        ? {}
-                        : {
-                              background: `linear-gradient(135deg, hsl(${hue} 20% 94%) 0%, hsl(${hue} 30% 88%) 100%)`,
-                          }
-                }
+                className="relative w-20 h-20 rounded-sm flex items-center justify-center border border-border/60 overflow-hidden transition-all duration-500 group-hover:border-accent/40 group-hover:shadow-lg bg-white"
             >
                 {showImage ? (
                     <img
-                        src={imageUrl}
+                        src={logoUrl}
                         alt={brand}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover:scale-105"
                         onError={() => setImgError(true)}
                     />
                 ) : (
