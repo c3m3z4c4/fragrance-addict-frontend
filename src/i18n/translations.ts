@@ -74,6 +74,7 @@ export const translations = {
         unisex: 'Unisex',
         unknown: 'Unknown',
         unnamed: 'Unnamed',
+        searchByAccords: 'Search by accords',
       },
       // Notes Pyramid
       notes: {
@@ -248,6 +249,7 @@ export const translations = {
         unisex: 'Unisex',
         unknown: 'Desconocido',
         unnamed: 'Sin nombre',
+        searchByAccords: 'Buscar por acordes',
       },
       // Notes Pyramid
       notes: {
