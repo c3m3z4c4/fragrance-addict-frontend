@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&family=Roboto+Condensed:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dosis:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -44,8 +44,8 @@
     --radius: 0.25rem;
 
     /* Custom properties */
-    --font-display: 'Roboto Condensed', sans-serif;
-    --font-body: 'Roboto', sans-serif;
+    --font-display: 'Dosis', sans-serif;
+    --font-body: 'Dosis', sans-serif;
 
     --sidebar-background: 50 20% 95%;
     --sidebar-foreground: 260 15% 7%;

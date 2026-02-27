@@ -12,9 +12,9 @@ interface NotesPyramidVisualProps {
 
 export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps) {
   const { t } = useTranslation();
-  const topNotes = notes?.top || [];
-  const heartNotes = notes?.heart || [];
-  const baseNotes = notes?.base || [];
+  const topNotes = [...new Set(notes?.top || [])];
+  const heartNotes = [...new Set(notes?.heart || [])];
+  const baseNotes = [...new Set(notes?.base || [])];
 
   if (!topNotes.length && !heartNotes.length && !baseNotes.length) {
     return null;
@@ -40,7 +40,7 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex flex-wrap gap-2 pl-4">
                 {topNotes.map((note, i) => (
                   <span
-                    key={note}
+                    key={`top-${i}`}
                     className="px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-sm text-foreground hover:bg-accent/20 transition-colors cursor-default"
                     style={{ animationDelay: `${i * 50}ms` }}
                   >
@@ -64,7 +64,7 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex flex-wrap gap-2 pl-4">
                 {heartNotes.map((note, i) => (
                   <span
-                    key={note}
+                    key={`heart-${i}`}
                     className="px-3 py-1.5 bg-gold/10 border border-gold/20 rounded-full text-sm text-foreground hover:bg-gold/20 transition-colors cursor-default"
                     style={{ animationDelay: `${i * 50 + 100}ms` }}
                   >
@@ -88,7 +88,7 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
               <div className="flex flex-wrap gap-2 pl-4">
                 {baseNotes.map((note, i) => (
                   <span
-                    key={note}
+                    key={`base-${i}`}
                     className="px-3 py-1.5 bg-amber/10 border border-amber/20 rounded-full text-sm text-foreground hover:bg-amber/20 transition-colors cursor-default"
                     style={{ animationDelay: `${i * 50 + 200}ms` }}
                   >
