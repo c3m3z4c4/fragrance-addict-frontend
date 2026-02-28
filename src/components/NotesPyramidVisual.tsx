@@ -28,17 +28,42 @@ const PLACEHOLDER_BG: Record<NoteCategory, string> = {
 };
 
 const PLACEHOLDER_TEXT: Record<NoteCategory, string> = {
-  top: 'text-accent/60',
-  heart: 'text-gold/60',
-  base: 'text-amber/60',
+  top: 'text-accent/40',
+  heart: 'text-gold/40',
+  base: 'text-amber/40',
 };
 
-// Section divider color per category
 const DIVIDER_COLOR: Record<NoteCategory, string> = {
   top: 'border-accent/20',
   heart: 'border-gold/20',
   base: 'border-amber/20',
 };
+
+/**
+ * When all notes are in a single category (scraper fallback), redistribute them
+ * proportionally: ~25% top, ~50% heart, ~25% base.
+ */
+function ensureThreeSections(
+  top: string[],
+  heart: string[],
+  base: string[]
+): { top: string[]; heart: string[]; base: string[] } {
+  const filledSections = [top, heart, base].filter((s) => s.length > 0).length;
+  if (filledSections >= 2) return { top, heart, base };
+
+  // Only one section has notes — redistribute
+  const all = [...top, ...heart, ...base];
+  if (all.length === 0) return { top, heart, base };
+
+  const topCount = Math.max(1, Math.round(all.length * 0.25));
+  const baseCount = Math.max(1, Math.round(all.length * 0.25));
+
+  return {
+    top: all.slice(0, topCount),
+    heart: all.slice(topCount, all.length - baseCount),
+    base: all.slice(all.length - baseCount),
+  };
+}
 
 function NoteCard({
   note,
@@ -60,7 +85,6 @@ function NoteCard({
       className="opacity-0 animate-fade-in flex flex-col items-center gap-1.5"
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards', width: 72 }}
     >
-      {/* Image / placeholder */}
       <div
         className={cn(
           'w-[68px] h-[68px] rounded-xl overflow-hidden border border-border/30 shadow-sm flex items-center justify-center flex-shrink-0',
@@ -80,8 +104,6 @@ function NoteCard({
           </span>
         )}
       </div>
-
-      {/* Note name */}
       <span className="text-[10px] font-medium text-foreground/80 text-center leading-tight line-clamp-2 w-full">
         {displayName}
       </span>
@@ -91,54 +113,25 @@ function NoteCard({
 
 export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps) {
   const { t, i18n } = useTranslation();
-  const topNotes = [...new Set(notes?.top || [])];
-  const heartNotes = [...new Set(notes?.heart || [])];
-  const baseNotes = [...new Set(notes?.base || [])];
 
-  if (!topNotes.length && !heartNotes.length && !baseNotes.length) {
+  const rawTop = [...new Set(notes?.top || [])];
+  const rawHeart = [...new Set(notes?.heart || [])];
+  const rawBase = [...new Set(notes?.base || [])];
+
+  if (!rawTop.length && !rawHeart.length && !rawBase.length) {
     return null;
   }
 
+  const { top: topNotes, heart: heartNotes, base: baseNotes } =
+    ensureThreeSections(rawTop, rawHeart, rawBase);
+
   const lang = i18n.language;
 
-  const renderSection = (
-    noteList: string[],
-    category: NoteCategory,
-    label: string,
-    baseDelay: number
-  ) => {
-    if (!noteList.length) return null;
-    return (
-      <div>
-        {/* Label */}
-        <p className={cn(
-          'text-[10px] uppercase tracking-[0.18em] font-semibold text-center mb-4',
-          LABEL_COLOR[category]
-        )}>
-          {label}
-        </p>
-
-        {/* Notes grid — centered */}
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-5">
-          {noteList.map((note, i) => (
-            <NoteCard
-              key={`${category}-${i}`}
-              note={note}
-              displayName={translateNote(note, lang)}
-              category={category}
-              delay={baseDelay + i * 35}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const sections = [
-    { list: topNotes, cat: 'top' as NoteCategory, label: t('notes.topNotes'), delay: 0 },
-    { list: heartNotes, cat: 'heart' as NoteCategory, label: t('notes.heartNotes'), delay: 120 },
-    { list: baseNotes, cat: 'base' as NoteCategory, label: t('notes.baseNotes'), delay: 240 },
-  ].filter(s => s.list.length > 0);
+  const SECTIONS: Array<{ list: string[]; cat: NoteCategory; label: string; delay: number }> = [
+    { list: topNotes, cat: 'top', label: t('notes.topNotes'), delay: 0 },
+    { list: heartNotes, cat: 'heart', label: t('notes.heartNotes'), delay: 120 },
+    { list: baseNotes, cat: 'base', label: t('notes.baseNotes'), delay: 240 },
+  ];
 
   return (
     <div className={cn('', className)}>
@@ -150,15 +143,40 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
         </h2>
       </div>
 
-      {/* Pyramid sections */}
+      {/* Always render all 3 sections */}
       <div className="space-y-0">
-        {sections.map((s, idx) => (
-          <div key={s.cat}>
-            <div className={cn(
-              'py-6',
-              idx > 0 && `border-t ${DIVIDER_COLOR[s.cat]}`
-            )}>
-              {renderSection(s.list, s.cat, s.label, s.delay)}
+        {SECTIONS.map(({ list, cat, label, delay }, idx) => (
+          <div key={cat}>
+            <div className={cn('py-6', idx > 0 && `border-t ${DIVIDER_COLOR[cat]}`)}>
+              {/* Section label */}
+              <p className={cn(
+                'text-[10px] uppercase tracking-[0.18em] font-semibold text-center mb-4',
+                LABEL_COLOR[cat]
+              )}>
+                {label}
+              </p>
+
+              {/* Notes or empty placeholder */}
+              {list.length > 0 ? (
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-5">
+                  {list.map((note, i) => (
+                    <NoteCard
+                      key={`${cat}-${i}`}
+                      note={note}
+                      displayName={translateNote(note, lang)}
+                      category={cat}
+                      delay={delay + i * 35}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className={cn(
+                  'text-center text-[11px]',
+                  PLACEHOLDER_TEXT[cat]
+                )}>
+                  —
+                </p>
+              )}
             </div>
           </div>
         ))}
