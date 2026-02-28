@@ -1086,15 +1086,28 @@ export interface GeminiRecommendation {
     keyNotes: string[];
 }
 
-export async function fetchAIRecommendations(model?: string): Promise<{
+export interface AIUserProfile {
+    ageRange?: string;
+    gender?: string;
+    occasions?: string[];
+    seasons?: string[];
+    intensity?: string;
+}
+
+export async function fetchAIRecommendations(
+    model?: string,
+    profile?: AIUserProfile
+): Promise<{
     recommendations: GeminiRecommendation[];
     basedOnFavorites: number;
+    model?: string;
     error?: string;
 }> {
     try {
-        const params = model ? `?model=${encodeURIComponent(model)}` : '';
-        const res = await fetch(`${API_BASE_URL}/api/ai/recommendations${params}`, {
-            headers: { ...getAuthHeader() },
+        const res = await fetch(`${API_BASE_URL}/api/ai/recommendations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ model, profile }),
         });
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));

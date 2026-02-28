@@ -1,34 +1,100 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, RefreshCw, Search, AlertCircle, Lock, ChevronDown } from 'lucide-react';
+import { Sparkles, RefreshCw, Search, AlertCircle, Lock, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAIRecommendations, type GeminiRecommendation } from '@/lib/api';
+import { fetchAIRecommendations, type GeminiRecommendation, type AIUserProfile } from '@/lib/api';
+
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const MODELS = [
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Latest · Recommended' },
-    { id: 'gemini-2.5-pro',   label: 'Gemini 2.5 Pro',   desc: 'Most capable' },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast & efficient' },
+    { id: 'gemini-2.5-flash',    label: 'Gemini 2.5 Flash',      desc: 'Latest · Recommended' },
+    { id: 'gemini-2.5-pro',      label: 'Gemini 2.5 Pro',        desc: 'Most capable' },
+    { id: 'gemini-2.0-flash',    label: 'Gemini 2.0 Flash',      desc: 'Fast & efficient' },
     { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Lightweight' },
     { id: 'gemini-flash-latest', label: 'Gemini Flash (latest)', desc: 'Auto-updated' },
 ];
 
-/** User qualifies if they have Google OAuth or a Gmail email */
+const AGE_RANGES = ['18-25', '26-35', '36-45', '46-55', '55+'];
+
+const GENDERS = [
+    { id: 'man',       label: 'Man' },
+    { id: 'woman',     label: 'Woman' },
+    { id: 'nonbinary', label: 'Non-binary' },
+];
+
+const OCCASIONS = [
+    { id: 'daily',   label: 'Daily' },
+    { id: 'work',    label: 'Work' },
+    { id: 'evening', label: 'Evening' },
+    { id: 'sport',   label: 'Sport' },
+    { id: 'travel',  label: 'Travel' },
+];
+
+const SEASONS = [
+    { id: 'spring', label: '🌸 Spring' },
+    { id: 'summer', label: '☀️ Summer' },
+    { id: 'autumn', label: '🍂 Autumn' },
+    { id: 'winter', label: '❄️ Winter' },
+];
+
+const INTENSITIES = [
+    { id: 'light',   label: 'Light' },
+    { id: 'moderate', label: 'Moderate' },
+    { id: 'strong',  label: 'Strong' },
+];
+
+const PROFILE_KEY = 'ai_user_profile';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
 function isGmailUser(user: { email: string; provider: string } | null): boolean {
     if (!user) return false;
     return user.provider === 'google' || user.email.toLowerCase().endsWith('@gmail.com');
 }
+
+function Pill({
+    active, onClick, children,
+}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                active
+                    ? 'bg-accent text-accent-foreground border-accent font-medium'
+                    : 'border-border text-muted-foreground hover:border-accent/50 hover:text-foreground'
+            }`}
+        >
+            {children}
+        </button>
+    );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export default function AIRecommendations() {
     const { user } = useAuth();
     const { t } = useTranslation();
     const navigate = useNavigate();
 
+    // Model selector
     const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
     const [modelMenuOpen, setModelMenuOpen] = useState(false);
+
+    // User profile (persisted in localStorage)
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [profile, setProfile] = useState<AIUserProfile>(() => {
+        try {
+            const stored = localStorage.getItem(PROFILE_KEY);
+            return stored ? JSON.parse(stored) : {};
+        } catch { return {}; }
+    });
+
+    // Results
     const [recommendations, setRecommendations] = useState<GeminiRecommendation[]>([]);
     const [basedOn, setBasedOn] = useState(0);
     const [usedModel, setUsedModel] = useState('');
@@ -36,13 +102,41 @@ export default function AIRecommendations() {
     const [error, setError] = useState<string | null>(null);
     const [hasGenerated, setHasGenerated] = useState(false);
 
+    // Persist profile to localStorage on every change
+    useEffect(() => {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    }, [profile]);
+
     const gmailUser = isGmailUser(user);
     const activeModel = MODELS.find(m => m.id === selectedModel) ?? MODELS[0];
+
+    // Count filled profile fields
+    const profileFilled = [
+        profile.ageRange,
+        profile.gender,
+        profile.occasions?.length,
+        profile.seasons?.length,
+        profile.intensity,
+    ].filter(Boolean).length;
+
+    function toggleOccasion(id: string) {
+        setProfile(p => {
+            const list = p.occasions ?? [];
+            return { ...p, occasions: list.includes(id) ? list.filter(o => o !== id) : [...list, id] };
+        });
+    }
+
+    function toggleSeason(id: string) {
+        setProfile(p => {
+            const list = p.seasons ?? [];
+            return { ...p, seasons: list.includes(id) ? list.filter(s => s !== id) : [...list, id] };
+        });
+    }
 
     const handleGenerate = async () => {
         setIsLoading(true);
         setError(null);
-        const result = await fetchAIRecommendations(selectedModel);
+        const result = await fetchAIRecommendations(selectedModel, profileFilled > 0 ? profile : undefined);
         setIsLoading(false);
         setHasGenerated(true);
         if (result.error) {
@@ -50,11 +144,12 @@ export default function AIRecommendations() {
         } else {
             setRecommendations(result.recommendations);
             setBasedOn(result.basedOnFavorites);
-            setUsedModel((result as any).model || selectedModel);
+            setUsedModel(result.model || selectedModel);
         }
     };
 
-    // ── Not logged in ──────────────────────────────────────────────────────────
+    // ── Guards ─────────────────────────────────────────────────────────────────
+
     if (!user) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -68,9 +163,7 @@ export default function AIRecommendations() {
                         <p className="text-muted-foreground mb-6">
                             {t('ai.loginDesc', { defaultValue: 'Sign in with your Google account to get AI-powered perfume recommendations.' })}
                         </p>
-                        <Button onClick={() => navigate('/login')}>
-                            {t('login.title', { defaultValue: 'Log in' })}
-                        </Button>
+                        <Button onClick={() => navigate('/login')}>{t('login.title', { defaultValue: 'Log in' })}</Button>
                     </div>
                 </main>
                 <Footer />
@@ -78,7 +171,6 @@ export default function AIRecommendations() {
         );
     }
 
-    // ── Not a Gmail / Google user ──────────────────────────────────────────────
     if (!gmailUser) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -90,11 +182,9 @@ export default function AIRecommendations() {
                             {t('ai.gmailRequired', { defaultValue: 'Gmail account required' })}
                         </h1>
                         <p className="text-muted-foreground mb-6">
-                            {t('ai.gmailDesc', { defaultValue: 'AI recommendations are powered by Google Gemini and require a Gmail or Google account. Sign in with Google to unlock this feature.' })}
+                            {t('ai.gmailDesc', { defaultValue: 'AI recommendations are powered by Google Gemini and require a Gmail or Google account.' })}
                         </p>
-                        <Button onClick={() => navigate('/login')}>
-                            {t('ai.switchToGoogle', { defaultValue: 'Sign in with Google' })}
-                        </Button>
+                        <Button onClick={() => navigate('/login')}>{t('ai.switchToGoogle', { defaultValue: 'Sign in with Google' })}</Button>
                     </div>
                 </main>
                 <Footer />
@@ -102,12 +192,14 @@ export default function AIRecommendations() {
         );
     }
 
-    // ── Gmail / Google user ────────────────────────────────────────────────────
+    // ── Main view ──────────────────────────────────────────────────────────────
+
     return (
         <div className="min-h-screen flex flex-col">
             <Header />
 
             <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
+
                 {/* Page header */}
                 <div className="text-center mb-10 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
@@ -116,18 +208,110 @@ export default function AIRecommendations() {
                     </div>
                     <h1 className="font-display text-4xl md:text-5xl font-medium mb-4">
                         {t('ai.title', { defaultValue: 'Your Scent' })}{' '}
-                        <span className="italic text-accent">
-                            {t('ai.titleAccent', { defaultValue: 'Profile' })}
-                        </span>
+                        <span className="italic text-accent">{t('ai.titleAccent', { defaultValue: 'Profile' })}</span>
                     </h1>
                     <p className="text-muted-foreground text-lg max-w-xl mx-auto">
                         {t('ai.subtitle', { defaultValue: 'Gemini analyses your favourite fragrances and suggests perfumes that match your unique taste.' })}
                     </p>
                 </div>
 
-                {/* Model selector + Generate button */}
+                {/* ── User profile form ── */}
+                <div className="border border-border rounded-2xl mb-6 overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setProfileOpen(o => !o)}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+                    >
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <User className="h-4 w-4 text-accent" />
+                            Personalize your recommendations
+                            {profileFilled > 0 && (
+                                <span className="ml-1 px-2 py-0.5 rounded-full bg-accent/10 text-accent text-xs">
+                                    {profileFilled} filled
+                                </span>
+                            )}
+                        </div>
+                        {profileOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+
+                    {profileOpen && (
+                        <div className="px-5 pb-5 space-y-5 border-t border-border">
+
+                            {/* Age range */}
+                            <div className="pt-4">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Age range</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {AGE_RANGES.map(r => (
+                                        <Pill key={r} active={profile.ageRange === r} onClick={() => setProfile(p => ({ ...p, ageRange: p.ageRange === r ? undefined : r }))}>
+                                            {r}
+                                        </Pill>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Gender */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Gender</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {GENDERS.map(g => (
+                                        <Pill key={g.id} active={profile.gender === g.id} onClick={() => setProfile(p => ({ ...p, gender: p.gender === g.id ? undefined : g.id }))}>
+                                            {g.label}
+                                        </Pill>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Intensity */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Preferred intensity</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {INTENSITIES.map(i => (
+                                        <Pill key={i.id} active={profile.intensity === i.id} onClick={() => setProfile(p => ({ ...p, intensity: p.intensity === i.id ? undefined : i.id }))}>
+                                            {i.label}
+                                        </Pill>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Occasions */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Occasions <span className="normal-case font-normal">(select all that apply)</span></p>
+                                <div className="flex flex-wrap gap-2">
+                                    {OCCASIONS.map(o => (
+                                        <Pill key={o.id} active={(profile.occasions ?? []).includes(o.id)} onClick={() => toggleOccasion(o.id)}>
+                                            {o.label}
+                                        </Pill>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Seasons */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Seasons <span className="normal-case font-normal">(select all that apply)</span></p>
+                                <div className="flex flex-wrap gap-2">
+                                    {SEASONS.map(s => (
+                                        <Pill key={s.id} active={(profile.seasons ?? []).includes(s.id)} onClick={() => toggleSeason(s.id)}>
+                                            {s.label}
+                                        </Pill>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {profileFilled > 0 && (
+                                <button
+                                    type="button"
+                                    className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                                    onClick={() => setProfile({})}
+                                >
+                                    Clear profile
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Model selector + Generate button ── */}
                 <div className="flex flex-col items-center gap-4 mb-12">
-                    {/* Model picker */}
                     <div className="relative">
                         <button
                             type="button"
@@ -138,7 +322,6 @@ export default function AIRecommendations() {
                             <span className="text-muted-foreground text-xs">{activeModel.desc}</span>
                             <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} />
                         </button>
-
                         {modelMenuOpen && (
                             <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 rounded-xl border border-border bg-card shadow-lg z-10 overflow-hidden">
                                 {MODELS.map(m => (
@@ -156,7 +339,6 @@ export default function AIRecommendations() {
                         )}
                     </div>
 
-                    {/* Generate */}
                     <Button
                         size="lg"
                         onClick={handleGenerate}
@@ -164,25 +346,16 @@ export default function AIRecommendations() {
                         className="gap-3 text-base px-8 py-6 rounded-full"
                     >
                         {isLoading ? (
-                            <>
-                                <RefreshCw className="h-5 w-5 animate-spin" />
-                                {t('ai.generating', { defaultValue: 'Analysing your taste…' })}
-                            </>
+                            <><RefreshCw className="h-5 w-5 animate-spin" />{t('ai.generating', { defaultValue: 'Analysing your taste…' })}</>
                         ) : hasGenerated ? (
-                            <>
-                                <RefreshCw className="h-5 w-5" />
-                                {t('ai.regenerate', { defaultValue: 'Regenerate suggestions' })}
-                            </>
+                            <><RefreshCw className="h-5 w-5" />{t('ai.regenerate', { defaultValue: 'Regenerate suggestions' })}</>
                         ) : (
-                            <>
-                                <Sparkles className="h-5 w-5" />
-                                {t('ai.generate', { defaultValue: 'Discover my scent profile' })}
-                            </>
+                            <><Sparkles className="h-5 w-5" />{t('ai.generate', { defaultValue: 'Discover my scent profile' })}</>
                         )}
                     </Button>
                 </div>
 
-                {/* Error state */}
+                {/* Error */}
                 {error && (
                     <div className="flex items-start gap-3 p-5 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive mb-8">
                         <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -219,7 +392,7 @@ export default function AIRecommendations() {
                             {basedOn > 0
                                 ? t('ai.basedOn', { count: basedOn, defaultValue: `Based on ${basedOn} favourite perfume${basedOn !== 1 ? 's' : ''}` })
                                 : t('ai.basedOnGeneral', { defaultValue: 'Based on your general taste profile' })}
-                            {usedModel && <span className="ml-2 opacity-60">· {usedModel}</span>}
+                            {usedModel && <span className="ml-2 opacity-50">· {usedModel}</span>}
                         </p>
                         <div className="space-y-4">
                             {recommendations.map((rec, i) => (
@@ -259,15 +432,15 @@ export default function AIRecommendations() {
                     </>
                 )}
 
-                {/* Empty — no favourites hint */}
+                {/* Empty */}
                 {!isLoading && hasGenerated && recommendations.length === 0 && !error && (
                     <div className="text-center py-12 text-muted-foreground">
                         <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-30" />
                         <p>{t('ai.noResults', { defaultValue: 'No suggestions returned. Try adding some favourites first!' })}</p>
                     </div>
                 )}
-            </main>
 
+            </main>
             <Footer />
         </div>
     );
