@@ -1086,13 +1086,14 @@ export interface GeminiRecommendation {
     keyNotes: string[];
 }
 
-export async function fetchAIRecommendations(): Promise<{
+export async function fetchAIRecommendations(model?: string): Promise<{
     recommendations: GeminiRecommendation[];
     basedOnFavorites: number;
     error?: string;
 }> {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/ai/recommendations`, {
+        const params = model ? `?model=${encodeURIComponent(model)}` : '';
+        const res = await fetch(`${API_BASE_URL}/api/ai/recommendations${params}`, {
             headers: { ...getAuthHeader() },
         });
         if (!res.ok) {

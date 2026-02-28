@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, RefreshCw, Search, AlertCircle, Lock } from 'lucide-react';
+import { Sparkles, RefreshCw, Search, AlertCircle, Lock, ChevronDown } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAIRecommendations, type GeminiRecommendation } from '@/lib/api';
+
+const MODELS = [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Latest · Recommended' },
+    { id: 'gemini-2.5-pro',   label: 'Gemini 2.5 Pro',   desc: 'Most capable' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast & efficient' },
+    { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Lightweight' },
+    { id: 'gemini-flash-latest', label: 'Gemini Flash (latest)', desc: 'Auto-updated' },
+];
 
 /** User qualifies if they have Google OAuth or a Gmail email */
 function isGmailUser(user: { email: string; provider: string } | null): boolean {
@@ -19,18 +27,22 @@ export default function AIRecommendations() {
     const { t } = useTranslation();
     const navigate = useNavigate();
 
+    const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+    const [modelMenuOpen, setModelMenuOpen] = useState(false);
     const [recommendations, setRecommendations] = useState<GeminiRecommendation[]>([]);
     const [basedOn, setBasedOn] = useState(0);
+    const [usedModel, setUsedModel] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasGenerated, setHasGenerated] = useState(false);
 
     const gmailUser = isGmailUser(user);
+    const activeModel = MODELS.find(m => m.id === selectedModel) ?? MODELS[0];
 
     const handleGenerate = async () => {
         setIsLoading(true);
         setError(null);
-        const result = await fetchAIRecommendations();
+        const result = await fetchAIRecommendations(selectedModel);
         setIsLoading(false);
         setHasGenerated(true);
         if (result.error) {
@@ -38,6 +50,7 @@ export default function AIRecommendations() {
         } else {
             setRecommendations(result.recommendations);
             setBasedOn(result.basedOnFavorites);
+            setUsedModel((result as any).model || selectedModel);
         }
     };
 
@@ -95,7 +108,7 @@ export default function AIRecommendations() {
             <Header />
 
             <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-                {/* Header */}
+                {/* Page header */}
                 <div className="text-center mb-10 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
                         <Sparkles className="h-4 w-4" />
@@ -112,8 +125,38 @@ export default function AIRecommendations() {
                     </p>
                 </div>
 
-                {/* Generate button */}
-                <div className="flex justify-center mb-12">
+                {/* Model selector + Generate button */}
+                <div className="flex flex-col items-center gap-4 mb-12">
+                    {/* Model picker */}
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setModelMenuOpen(o => !o)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-sm hover:border-accent/50 transition-colors"
+                        >
+                            <span className="font-medium">{activeModel.label}</span>
+                            <span className="text-muted-foreground text-xs">{activeModel.desc}</span>
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {modelMenuOpen && (
+                            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 rounded-xl border border-border bg-card shadow-lg z-10 overflow-hidden">
+                                {MODELS.map(m => (
+                                    <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
+                                        className={`w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-accent/5 transition-colors text-left ${m.id === selectedModel ? 'text-accent font-medium' : ''}`}
+                                    >
+                                        <span>{m.label}</span>
+                                        <span className="text-xs text-muted-foreground">{m.desc}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Generate */}
                     <Button
                         size="lg"
                         onClick={handleGenerate}
@@ -146,6 +189,7 @@ export default function AIRecommendations() {
                         <div>
                             <p className="font-medium">{t('ai.errorTitle', { defaultValue: 'Could not generate recommendations' })}</p>
                             <p className="text-sm mt-1 opacity-80">{error}</p>
+                            <p className="text-xs mt-2 opacity-60">Try selecting a different model above.</p>
                         </div>
                     </div>
                 )}
@@ -175,6 +219,7 @@ export default function AIRecommendations() {
                             {basedOn > 0
                                 ? t('ai.basedOn', { count: basedOn, defaultValue: `Based on ${basedOn} favourite perfume${basedOn !== 1 ? 's' : ''}` })
                                 : t('ai.basedOnGeneral', { defaultValue: 'Based on your general taste profile' })}
+                            {usedModel && <span className="ml-2 opacity-60">· {usedModel}</span>}
                         </p>
                         <div className="space-y-4">
                             {recommendations.map((rec, i) => (
