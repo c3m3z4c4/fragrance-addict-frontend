@@ -14,6 +14,8 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { usePerfumeDetail, usePerfumes, findSimilarPerfumes } from '@/hooks/usePerfumeSearch';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { fetchBrands } from '@/lib/api';
 
 const PerfumeDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +25,12 @@ const PerfumeDetail = () => {
 
   const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
   const { data: allPerfumes } = usePerfumes(1, 50);
+  const { data: brands } = useQuery({ queryKey: ['brands'], queryFn: fetchBrands, staleTime: 5 * 60 * 1000 });
+
   const favorite = perfume ? isFavorite(perfume.id) : false;
+  const brandImageUrl = perfume && brands
+    ? (brands.find(b => b.name === perfume.brand)?.imageUrl ?? null)
+    : null;
   const similarPerfumes = perfume && allPerfumes?.perfumes
     ? findSimilarPerfumes(perfume, allPerfumes.perfumes, 4)
     : [];
@@ -157,7 +164,7 @@ const PerfumeDetail = () => {
             >
               {/* Brand Badge + Name */}
               <div className="flex items-start gap-5 mb-6">
-                <BrandBadge brand={perfume.brand} />
+                <BrandBadge brand={perfume.brand} imageUrl={brandImageUrl} />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
                     {perfume.brand}

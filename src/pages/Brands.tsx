@@ -7,9 +7,7 @@ import { Footer } from '@/components/Footer';
 import { fetchBrands } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useBrandLogo } from '@/hooks/useBrandLogo';
 
-// Derive a consistent hue from brand name for the monogram fallback
 function brandHue(name: string): number {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -30,14 +28,14 @@ function getInitials(name: string): string {
 interface BrandCardProps {
   name: string;
   count: number;
+  imageUrl: string | null;
   index: number;
 }
 
-function BrandCard({ name, count, index }: BrandCardProps) {
+function BrandCard({ name, count, imageUrl, index }: BrandCardProps) {
   const { t } = useTranslation();
-  const logoUrl = useBrandLogo(name);
   const [imgError, setImgError] = useState(false);
-  const showLogo = logoUrl && !imgError;
+  const showLogo = imageUrl && !imgError;
   const hue = brandHue(name);
   const initials = getInitials(name);
 
@@ -55,12 +53,17 @@ function BrandCard({ name, count, index }: BrandCardProps) {
       }}
     >
       {/* Logo area — white background contrasts with most brand logos */}
-      <div className="aspect-[4/3] flex items-center justify-center bg-white p-8 overflow-hidden">
+      <div
+        className="aspect-[4/3] flex items-center justify-center overflow-hidden"
+        style={showLogo ? { background: '#fff' } : {
+          background: `linear-gradient(135deg, hsl(${hue} 20% 94%) 0%, hsl(${hue} 30% 88%) 100%)`,
+        }}
+      >
         {showLogo ? (
           <img
-            src={logoUrl}
+            src={imageUrl}
             alt={name}
-            className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
+            className="max-h-full max-w-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
             onError={() => setImgError(true)}
           />
         ) : (
@@ -121,6 +124,7 @@ const Brands = () => {
                   key={brand.name}
                   name={brand.name}
                   count={brand.count}
+                  imageUrl={brand.imageUrl}
                   index={index}
                 />
               ))}

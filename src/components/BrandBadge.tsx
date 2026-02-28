@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { useBrandLogo } from '@/hooks/useBrandLogo';
 
 interface BrandBadgeProps {
     brand: string;
+    imageUrl?: string | null;
     className?: string;
 }
 
@@ -24,13 +24,12 @@ function brandHue(name: string): number {
     return Math.abs(hash) % 360;
 }
 
-export function BrandBadge({ brand, className }: BrandBadgeProps) {
+export function BrandBadge({ brand, imageUrl, className }: BrandBadgeProps) {
     const initials = getInitials(brand);
     const hue = brandHue(brand);
-    const logoUrl = useBrandLogo(brand);
     const [imgError, setImgError] = useState(false);
 
-    const showImage = logoUrl && !imgError;
+    const showImage = imageUrl && !imgError;
 
     return (
         <Link
@@ -40,11 +39,14 @@ export function BrandBadge({ brand, className }: BrandBadgeProps) {
         >
             {/* Badge container */}
             <div
-                className="relative w-20 h-20 rounded-sm flex items-center justify-center border border-border/60 overflow-hidden transition-all duration-500 group-hover:border-accent/40 group-hover:shadow-lg bg-white"
+                className="relative w-20 h-20 rounded-sm flex items-center justify-center border border-border/60 overflow-hidden transition-all duration-500 group-hover:border-accent/40 group-hover:shadow-lg"
+                style={showImage ? { background: '#fff' } : {
+                    background: `linear-gradient(135deg, hsl(${hue} 20% 94%) 0%, hsl(${hue} 30% 88%) 100%)`,
+                }}
             >
                 {showImage ? (
                     <img
-                        src={logoUrl}
+                        src={imageUrl}
                         alt={brand}
                         className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover:scale-105"
                         onError={() => setImgError(true)}
