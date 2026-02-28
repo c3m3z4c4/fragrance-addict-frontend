@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFavorites } from '@/hooks/useFavorites';
-import { type Perfume } from '@/data/perfumes';
+import { type APIPerfume } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface PerfumeCardProps {
-  perfume: Perfume;
+  perfume: APIPerfume;
   index?: number;
 }
 
@@ -78,7 +78,7 @@ export function PerfumeCard({ perfume, index = 0 }: PerfumeCardProps) {
 
         {/* Notes Preview */}
         <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
-          {perfume.notes.top.slice(0, 2).join(', ')}
+          {(perfume.notes?.top ?? []).slice(0, 2).join(', ')}
         </p>
 
         {/* Rating */}

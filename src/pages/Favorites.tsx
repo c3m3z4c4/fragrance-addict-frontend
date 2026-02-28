@@ -1,21 +1,26 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Heart } from 'lucide-react';
+import { Heart, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { SearchModal } from '@/components/SearchModal';
 import { PerfumeCard } from '@/components/PerfumeCard';
 import { Button } from '@/components/ui/button';
-import { useFavorites } from '@/hooks/useFavorites';
-import { perfumes } from '@/data/perfumes';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchFavorites } from '@/lib/api';
 
 const Favorites = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { favorites } = useFavorites();
 
-  const favoritePerfumes = perfumes.filter(p => favorites.includes(p.id));
+  const { data: favoritePerfumes = [], isLoading } = useQuery({
+    queryKey: ['favorites', user?.id],
+    queryFn: fetchFavorites,
+    enabled: !!user,
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -35,14 +40,24 @@ const Favorites = () => {
           </p>
         </div>
 
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+          </div>
+        )}
+
         {/* Content */}
-        {favoritePerfumes.length > 0 ? (
+        {!isLoading && favoritePerfumes.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {favoritePerfumes.map((perfume, index) => (
               <PerfumeCard key={perfume.id} perfume={perfume} index={index} />
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* Empty */}
+        {!isLoading && favoritePerfumes.length === 0 && (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
               <Heart className="h-10 w-10 text-muted-foreground" />
