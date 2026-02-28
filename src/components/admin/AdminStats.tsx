@@ -143,10 +143,10 @@ export function AdminStats() {
             <div className="flex flex-wrap gap-2">
               {brands.map((brand) => (
                 <span
-                  key={brand}
+                  key={brand.name}
                   className="px-3 py-1 bg-secondary/50 rounded-full text-sm"
                 >
-                  {brand}
+                  {brand.name}
                 </span>
               ))}
             </div>

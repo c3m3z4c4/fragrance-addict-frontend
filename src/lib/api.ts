@@ -420,15 +420,13 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
             console.error('Failed to fetch stats');
             return { total: 0, brands: 0 };
         }
-        const data = await response.json();
-
-        // Handle both response formats
-        if (data.data && typeof data.data === 'object') {
-            return data.data;
-        } else if (typeof data === 'object') {
-            return data;
-        }
-        return { total: 0, brands: 0 };
+        const raw = await response.json();
+        // Backend returns { success, data: { totalPerfumes, totalBrands, ... } }
+        const d = raw.data ?? raw;
+        return {
+            total: d.totalPerfumes ?? d.total ?? 0,
+            brands: d.totalBrands ?? d.brands ?? 0,
+        };
     } catch (error) {
         console.error('❌ Fetch stats error:', error);
         return { total: 0, brands: 0 };
