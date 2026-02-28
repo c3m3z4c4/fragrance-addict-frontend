@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Heart, Share2, Star } from 'lucide-react';
@@ -22,6 +23,7 @@ const PerfumeDetail = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
   const { data: allPerfumes } = usePerfumes(1, 50);
@@ -227,14 +229,27 @@ const PerfumeDetail = () => {
               </div>
 
               {/* Description */}
-              {perfume.description && (
-                <div className="mb-8">
-                  <h2 className="font-display text-lg mb-3">{t('perfume.aboutFragrance')}</h2>
-                  <p className="text-muted-foreground leading-relaxed text-sm">
-                    {perfume.description}
-                  </p>
-                </div>
-              )}
+              {perfume.description && (() => {
+                const MAX_LEN = 220;
+                const isLong = perfume.description.length > MAX_LEN;
+                const displayed = showFullDescription || !isLong
+                  ? perfume.description
+                  : perfume.description.substring(0, MAX_LEN).trimEnd() + '…';
+                return (
+                  <div className="mb-8">
+                    <h2 className="font-display text-lg mb-3">{t('perfume.aboutFragrance')}</h2>
+                    <p className="text-muted-foreground leading-relaxed text-sm">{displayed}</p>
+                    {isLong && (
+                      <button
+                        onClick={() => setShowFullDescription(v => !v)}
+                        className="mt-2 text-xs text-accent hover:underline"
+                      >
+                        {showFullDescription ? t('perfume.readLess') : t('perfume.readMore')}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Notes Pyramid */}
               {perfume.notes && (

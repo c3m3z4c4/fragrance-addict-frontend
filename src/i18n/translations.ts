@@ -75,11 +75,14 @@ export const translations = {
         unknown: 'Unknown',
         unnamed: 'Unnamed',
         searchByAccords: 'Search by accords',
+        readMore: 'Read more',
+        readLess: 'Read less',
       },
       // Notes Pyramid
       notes: {
+        pyramidTitle: 'Fragrance Pyramid',
         topNotes: 'Top Notes',
-        heartNotes: 'Middle Notes',
+        heartNotes: 'Heart Notes',
         baseNotes: 'Base Notes',
       },
       // Performance
@@ -250,12 +253,15 @@ export const translations = {
         unknown: 'Desconocido',
         unnamed: 'Sin nombre',
         searchByAccords: 'Buscar por acordes',
+        readMore: 'Leer más',
+        readLess: 'Leer menos',
       },
       // Notes Pyramid
       notes: {
+        pyramidTitle: 'Pirámide del Perfume',
         topNotes: 'Notas de Salida',
-        heartNotes: 'Notas Medias',
-        baseNotes: 'Notas de Fondo',
+        heartNotes: 'Corazón',
+        baseNotes: 'Base',
       },
       // Performance
       performance: {

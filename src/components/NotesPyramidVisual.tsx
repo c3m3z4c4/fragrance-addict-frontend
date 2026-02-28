@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Triangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNoteImage } from '@/hooks/useNoteImage';
+import { useNoteImage, translateNote } from '@/hooks/useNoteImage';
 
 interface NotesPyramidVisualProps {
   notes: {
@@ -32,12 +33,21 @@ const PLACEHOLDER_TEXT: Record<NoteCategory, string> = {
   base: 'text-amber/60',
 };
 
+// Section divider color per category
+const DIVIDER_COLOR: Record<NoteCategory, string> = {
+  top: 'border-accent/20',
+  heart: 'border-gold/20',
+  base: 'border-amber/20',
+};
+
 function NoteCard({
   note,
+  displayName,
   category,
   delay,
 }: {
   note: string;
+  displayName: string;
   category: NoteCategory;
   delay: number;
 }) {
@@ -47,40 +57,40 @@ function NoteCard({
 
   return (
     <div
-      className="opacity-0 animate-fade-in flex flex-col items-center gap-1.5 w-[76px]"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
+      className="opacity-0 animate-fade-in flex flex-col items-center gap-1.5"
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards', width: 72 }}
     >
       {/* Image / placeholder */}
       <div
         className={cn(
-          'w-[72px] h-[72px] rounded-2xl overflow-hidden border border-border/30 shadow-sm flex items-center justify-center',
+          'w-[68px] h-[68px] rounded-xl overflow-hidden border border-border/30 shadow-sm flex items-center justify-center flex-shrink-0',
           showImage ? 'bg-white' : PLACEHOLDER_BG[category]
         )}
       >
         {showImage ? (
           <img
             src={imageUrl}
-            alt={note}
+            alt={displayName}
             className="w-full h-full object-cover"
             onError={() => setImgError(true)}
           />
         ) : (
           <span className={cn('text-lg font-semibold select-none', PLACEHOLDER_TEXT[category])}>
-            {note.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </span>
         )}
       </div>
 
-      {/* Note name below */}
-      <span className="text-[11px] font-medium text-foreground text-center leading-tight line-clamp-2 w-full">
-        {note}
+      {/* Note name */}
+      <span className="text-[10px] font-medium text-foreground/80 text-center leading-tight line-clamp-2 w-full">
+        {displayName}
       </span>
     </div>
   );
 }
 
 export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const topNotes = [...new Set(notes?.top || [])];
   const heartNotes = [...new Set(notes?.heart || [])];
   const baseNotes = [...new Set(notes?.base || [])];
@@ -88,6 +98,8 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
   if (!topNotes.length && !heartNotes.length && !baseNotes.length) {
     return null;
   }
+
+  const lang = i18n.language;
 
   const renderSection = (
     noteList: string[],
@@ -98,16 +110,23 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
     if (!noteList.length) return null;
     return (
       <div>
-        <p className={cn('text-xs uppercase tracking-widest font-semibold mb-4', LABEL_COLOR[category])}>
+        {/* Label */}
+        <p className={cn(
+          'text-[10px] uppercase tracking-[0.18em] font-semibold text-center mb-4',
+          LABEL_COLOR[category]
+        )}>
           {label}
         </p>
-        <div className="flex flex-wrap gap-4">
+
+        {/* Notes grid — centered */}
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-5">
           {noteList.map((note, i) => (
             <NoteCard
               key={`${category}-${i}`}
               note={note}
+              displayName={translateNote(note, lang)}
               category={category}
-              delay={baseDelay + i * 40}
+              delay={baseDelay + i * 35}
             />
           ))}
         </div>
@@ -115,11 +134,35 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
     );
   };
 
+  const sections = [
+    { list: topNotes, cat: 'top' as NoteCategory, label: t('notes.topNotes'), delay: 0 },
+    { list: heartNotes, cat: 'heart' as NoteCategory, label: t('notes.heartNotes'), delay: 120 },
+    { list: baseNotes, cat: 'base' as NoteCategory, label: t('notes.baseNotes'), delay: 240 },
+  ].filter(s => s.list.length > 0);
+
   return (
-    <div className={cn('space-y-7', className)}>
-      {renderSection(topNotes, 'top', t('notes.topNotes'), 0)}
-      {renderSection(heartNotes, 'heart', t('notes.heartNotes'), 100)}
-      {renderSection(baseNotes, 'base', t('notes.baseNotes'), 200)}
+    <div className={cn('', className)}>
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-6">
+        <Triangle className="h-3.5 w-3.5 text-muted-foreground" />
+        <h2 className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">
+          {t('notes.pyramidTitle')}
+        </h2>
+      </div>
+
+      {/* Pyramid sections */}
+      <div className="space-y-0">
+        {sections.map((s, idx) => (
+          <div key={s.cat}>
+            <div className={cn(
+              'py-6',
+              idx > 0 && `border-t ${DIVIDER_COLOR[s.cat]}`
+            )}>
+              {renderSection(s.list, s.cat, s.label, s.delay)}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
