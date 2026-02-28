@@ -94,6 +94,14 @@ export interface APIPerfume {
         url: string;
         imageUrl?: string;
     }>;
+    seasonUsage?: {
+        winter: number;
+        spring: number;
+        summer: number;
+        autumn: number;
+        day: number;
+        night: number;
+    } | null;
     sourceUrl?: string;
 }
 

@@ -102,6 +102,17 @@ export const translations = {
         longlasting: 'Long Lasting',
         verylong: 'Very Long',
       },
+      // When To Use
+      whenToUse: {
+        title: 'When To Wear It',
+        winter: 'Winter',
+        spring: 'Spring',
+        summer: 'Summer',
+        autumn: 'Autumn',
+        day: 'Day',
+        night: 'Night',
+        estimated: 'Estimated from fragrance profile',
+      },
       // Similar Perfumes
       similar: {
         title: 'Similar Fragrances',
@@ -279,6 +290,17 @@ export const translations = {
         eternal: 'Eterno',
         longlasting: 'Duradero',
         verylong: 'Muy Largo',
+      },
+      // When To Use
+      whenToUse: {
+        title: 'Cuándo Usarlo',
+        winter: 'Invierno',
+        spring: 'Primavera',
+        summer: 'Verano',
+        autumn: 'Otoño',
+        day: 'Día',
+        night: 'Noche',
+        estimated: 'Estimado según el perfil de la fragancia',
       },
       // Similar Perfumes
       similar: {

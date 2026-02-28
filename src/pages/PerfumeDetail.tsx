@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { NotesPyramidVisual } from '@/components/NotesPyramidVisual';
 import { PerformanceMetrics } from '@/components/PerformanceMetrics';
+import { WhenToUse } from '@/components/WhenToUse';
 import { SimilarPerfumesSection } from '@/components/SimilarPerfumesSection';
 import { AccordBars } from '@/components/AccordBars';
 import { BrandBadge } from '@/components/BrandBadge';
@@ -263,6 +264,14 @@ const PerfumeDetail = () => {
                 projection={perfume.projection}
               />
 
+              {/* When To Use */}
+              <WhenToUse
+                seasonUsage={perfume.seasonUsage}
+                accords={perfume.accords}
+                concentration={perfume.concentration}
+                gender={perfume.gender}
+                className="mt-2"
+              />
 
               {/* Accord bars on mobile (below details, since col 3 is hidden on mobile) */}
               {perfume.accords && perfume.accords.length > 0 && (
