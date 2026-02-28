@@ -23,7 +23,7 @@ const AGE_RANGES = ['18-25', '26-35', '36-45', '46-55', '55+'];
 const GENDERS = [
     { id: 'man',       label: 'Man' },
     { id: 'woman',     label: 'Woman' },
-    { id: 'nonbinary', label: 'Non-binary' },
+    { id: 'unisex', label: 'Unisex' },
 ];
 
 const OCCASIONS = [
