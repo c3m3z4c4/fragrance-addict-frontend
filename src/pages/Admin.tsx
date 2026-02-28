@@ -9,8 +9,9 @@ import { AdminStats } from '@/components/admin/AdminStats';
 import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { BrandScraper } from '@/components/admin/BrandScraper';
+import { ResetPanel } from '@/components/admin/ResetPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -85,7 +86,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-5xl grid-cols-8">
+          <TabsList className="grid w-full max-w-5xl grid-cols-9">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -117,6 +118,10 @@ export default function Admin() {
             <TabsTrigger value="brands" className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">Brands</span>
+            </TabsTrigger>
+            <TabsTrigger value="reset" className="flex items-center gap-2 text-destructive data-[state=active]:text-destructive">
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Reset</span>
             </TabsTrigger>
           </TabsList>
 
@@ -150,6 +155,10 @@ export default function Admin() {
 
           <TabsContent value="brands" className="animate-fade-in">
             <BrandScraper />
+          </TabsContent>
+
+          <TabsContent value="reset" className="animate-fade-in">
+            <ResetPanel />
           </TabsContent>
         </Tabs>
       </main>
