@@ -833,6 +833,53 @@ export async function addIncompleteToQueue(limit = 50): Promise<{
     return response.json();
 }
 
+// Get incomplete perfumes grouped by brand
+export interface IncompleteBrand {
+    brand: string;
+    count: number;
+    ids: string[];
+    urls: string[];
+}
+
+export async function getIncompletePerfumesByBrand(): Promise<{
+    success: boolean;
+    brands?: IncompleteBrand[];
+    total?: number;
+    error?: string;
+}> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape/incomplete/by-brand`, {
+        headers: { ...getAuthHeader() },
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed' }));
+        return { success: false, error: error.error || 'Failed to fetch by-brand data' };
+    }
+    return response.json();
+}
+
+// Re-scrape all incomplete perfumes from a specific brand (queue or direct)
+export async function rescrapeBrand(brand: string, direct = false): Promise<{
+    success: boolean;
+    added?: number;
+    queueSize?: number;
+    autoStarted?: boolean;
+    processed?: number;
+    failed?: number;
+    message?: string;
+    error?: string;
+}> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape/rescrape/brand`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ brand, direct }),
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed' }));
+        return { success: false, error: error.error || 'Failed to rescrape brand' };
+    }
+    return response.json();
+}
+
 // ============= METRICS FUNCTIONS =============
 
 export interface MetricsData {
@@ -996,4 +1043,64 @@ export async function scrapeBrands(
         throw new Error(err.error || 'Failed to scrape brands');
     }
     return response.json();
+}
+
+// ============= ABOUT PAGE CONTENT =============
+
+export interface AboutContent {
+    hero: { eyebrow: string; title: string; titleAccent: string; subtitle: string };
+    story: { title: string; paragraphs: string[]; imageUrl: string; imageAlt: string };
+    values: { title: string; items: Array<{ title: string; description: string }> };
+}
+
+export async function fetchAboutContent(): Promise<AboutContent | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/content/about`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.content ?? null;
+    } catch {
+        return null;
+    }
+}
+
+export async function updateAboutContent(content: AboutContent): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/content/about`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify(content),
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+// ============= GEMINI AI RECOMMENDATIONS =============
+
+export interface GeminiRecommendation {
+    name: string;
+    brand: string;
+    reason: string;
+    keyNotes: string[];
+}
+
+export async function fetchAIRecommendations(): Promise<{
+    recommendations: GeminiRecommendation[];
+    basedOnFavorites: number;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/ai/recommendations`, {
+            headers: { ...getAuthHeader() },
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { recommendations: [], basedOnFavorites: 0, error: data.error || 'Request failed' };
+        }
+        return res.json();
+    } catch {
+        return { recommendations: [], basedOnFavorites: 0, error: 'Network error' };
+    }
 }

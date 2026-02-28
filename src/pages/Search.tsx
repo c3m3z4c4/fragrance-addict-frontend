@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { usePerfumeSearch } from '@/hooks/usePerfumeSearch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GenderFilterButtons, type GenderFilter } from '@/components/GenderFilterButtons';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -12,12 +13,15 @@ const ITEMS_PER_PAGE = 10;
 
 export default function Search() {
     const { t } = useTranslation();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
+    const genderParam = searchParams.get('g') as GenderFilter | null;
     const [currentPage, setCurrentPage] = useState(1);
-    const [genderFilter, setGenderFilter] = useState<
-        'all' | 'masculine' | 'feminine' | 'unisex'
-    >('all');
+    const [genderFilter, setGenderFilter] = useState<GenderFilter>(
+        genderParam && ['masculine', 'feminine', 'unisex'].includes(genderParam)
+            ? genderParam
+            : 'all'
+    );
 
     // Always call hook - it handles disabled state internally
     const { data, isLoading, error } = usePerfumeSearch(query);
@@ -41,12 +45,28 @@ export default function Search() {
         setCurrentPage(1);
     }, [query]);
 
-    // Handle gender filter change
-    const handleGenderFilterChange = (
-        gender: 'all' | 'masculine' | 'feminine' | 'unisex'
-    ) => {
+    // Sync gender filter from URL when navigating in
+    useEffect(() => {
+        const g = searchParams.get('g') as GenderFilter | null;
+        if (g && ['masculine', 'feminine', 'unisex'].includes(g)) {
+            setGenderFilter(g);
+        } else {
+            setGenderFilter('all');
+        }
+        setCurrentPage(1);
+    }, [searchParams.get('g')]);
+
+    // Handle gender filter change — also updates URL
+    const handleGenderFilterChange = (gender: GenderFilter) => {
         setGenderFilter(gender);
         setCurrentPage(1);
+        const next = new URLSearchParams(searchParams);
+        if (gender === 'all') {
+            next.delete('g');
+        } else {
+            next.set('g', gender);
+        }
+        setSearchParams(next, { replace: true });
     };
 
     // Early return for invalid query
@@ -169,38 +189,25 @@ export default function Search() {
                     </p>
 
                     {/* Gender Filter */}
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex flex-wrap gap-3 items-center">
                         <span className="text-sm font-semibold text-muted-foreground">
                             {t('search.filterByGender')}
                         </span>
-                        <Button
-                            variant={genderFilter === 'all' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleGenderFilterChange('all')}
-                        >
-                            {t('search.all')}
-                        </Button>
-                        <Button
-                            variant={genderFilter === 'masculine' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleGenderFilterChange('masculine')}
-                        >
-                            {t('search.masculine')}
-                        </Button>
-                        <Button
-                            variant={genderFilter === 'feminine' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleGenderFilterChange('feminine')}
-                        >
-                            {t('search.feminine')}
-                        </Button>
-                        <Button
-                            variant={genderFilter === 'unisex' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleGenderFilterChange('unisex')}
-                        >
-                            {t('search.unisex')}
-                        </Button>
+                        <GenderFilterButtons
+                            value={genderFilter}
+                            onChange={handleGenderFilterChange}
+                            showLabels={true}
+                        />
+                        {genderFilter !== 'all' && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground"
+                                onClick={() => handleGenderFilterChange('all')}
+                            >
+                                {t('search.all')} ×
+                            </Button>
+                        )}
                     </div>
                 </div>
 

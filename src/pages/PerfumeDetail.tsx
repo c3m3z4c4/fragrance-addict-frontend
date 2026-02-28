@@ -40,18 +40,39 @@ const PerfumeDetail = () => {
 
   const handleShare = async () => {
     if (!perfume) return;
+
+    // Try Web Share API (mobile / supported browsers)
     if (navigator.share) {
-      await navigator.share({
-        title: `${perfume.name} by ${perfume.brand}`,
-        url: window.location.href,
-      });
-    } else {
-      await navigator.clipboard.writeText(window.location.href);
-      toast({
-        title: t('perfume.linkCopied'),
-        description: t('perfume.linkCopiedDesc'),
-      });
+      try {
+        await navigator.share({
+          title: `${perfume.name} by ${perfume.brand}`,
+          url: window.location.href,
+        });
+        return;
+      } catch (err) {
+        // User cancelled — don't proceed to clipboard copy
+        if ((err as Error).name === 'AbortError') return;
+      }
     }
+
+    // Try Clipboard API (requires HTTPS or localhost)
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // Fallback for HTTP: textarea + execCommand
+      const el = document.createElement('textarea');
+      el.value = window.location.href;
+      el.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+
+    toast({
+      title: t('perfume.linkCopied'),
+      description: t('perfume.linkCopiedDesc'),
+    });
   };
 
   const getGenderLabel = (gender?: string) => {
@@ -133,6 +154,7 @@ const PerfumeDetail = () => {
                 <Button
                   variant="secondary"
                   size="icon"
+                  title={favorite ? t('perfume.removedFromFavorites') : t('perfume.addedToFavorites')}
                   className={cn(
                     "bg-background/80 backdrop-blur-sm",
                     favorite && "text-accent"
@@ -152,6 +174,7 @@ const PerfumeDetail = () => {
                 <Button
                   variant="secondary"
                   size="icon"
+                  title={t('perfume.share', { defaultValue: 'Share' })}
                   className="bg-background/80 backdrop-blur-sm"
                   onClick={handleShare}
                 >
@@ -206,7 +229,7 @@ const PerfumeDetail = () => {
                 {perfume.perfumer && (
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.perfumer')}</p>
-                    <p className="font-medium text-sm">{perfume.perfumer}</p>
+                    <p className="font-medium text-sm">{perfume.perfumer.replace(/^perfumers?[,:]?\s*/i, '').trim()}</p>
                   </div>
                 )}
                 {perfume.year && (
@@ -262,6 +285,8 @@ const PerfumeDetail = () => {
                 sillage={perfume.sillage}
                 longevity={perfume.longevity}
                 projection={perfume.projection}
+                accords={perfume.accords}
+                concentration={perfume.concentration}
               />
 
               {/* When To Use */}

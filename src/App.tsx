@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import { ApiKeys } from './pages/ApiKeys';
+import AIRecommendations from './pages/AIRecommendations';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -71,6 +72,7 @@ function AppRoutes() {
             <Route path="/brands" element={<Brands />} />
             <Route path="/brands/:brand" element={<BrandDetail />} />
             <Route path="/about" element={<About />} />
+            <Route path="/recommendations" element={<AIRecommendations />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route

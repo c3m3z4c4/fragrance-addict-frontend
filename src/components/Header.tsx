@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Heart, Search, Menu, X, LogIn, LogOut, Key } from 'lucide-react';
+import { Heart, Search, Menu, X, LogIn, LogOut, Key, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,15 +15,18 @@ interface HeaderProps {
 export function Header({ onSearchClick }: HeaderProps = {}) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { favoritesCount } = useFavorites();
-    const { isAdmin, logout } = useAuth();
+    const { user, isAdmin, logout } = useAuth();
+    const isLoggedIn = !!user;
+    const isGmailUser = isLoggedIn && (user?.provider === 'google' || user?.email?.toLowerCase().endsWith('@gmail.com'));
     const location = useLocation();
     const { t } = useTranslation();
 
     const navLinks = [
         { href: '/', label: t('nav.home') },
-        { href: '/favorites', label: t('nav.favorites') },
+        ...(isLoggedIn ? [{ href: '/favorites', label: t('nav.favorites') }] : []),
         { href: '/brands', label: t('nav.brands') },
         { href: '/about', label: t('nav.about') },
+        ...(isGmailUser ? [{ href: '/recommendations', label: t('nav.aiRecommendations', { defaultValue: '✨ AI' }) }] : []),
         ...(isAdmin ? [{ href: '/admin', label: t('nav.admin') }] : []),
     ];
 
@@ -67,6 +70,7 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                 size="icon"
                                 onClick={onSearchClick}
                                 className="hover:text-accent"
+                                title={t('common.search')}
                             >
                                 <Search className="h-5 w-5" />
                             </Button>
@@ -76,28 +80,32 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                     variant="ghost"
                                     size="icon"
                                     className="hover:text-accent"
+                                    title={t('common.search')}
                                 >
                                     <Search className="h-5 w-5" />
                                 </Button>
                             </Link>
                         )}
 
-                        <Link to="/favorites">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="relative hover:text-accent"
-                            >
-                                <Heart className="h-5 w-5" />
-                                {favoritesCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent text-accent-foreground text-xs flex items-center justify-center font-medium">
-                                        {favoritesCount}
-                                    </span>
-                                )}
-                            </Button>
-                        </Link>
+                        {isLoggedIn && (
+                            <Link to="/favorites">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="relative hover:text-accent"
+                                    title={t('nav.favorites')}
+                                >
+                                    <Heart className="h-5 w-5" />
+                                    {favoritesCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent text-accent-foreground text-xs flex items-center justify-center font-medium">
+                                            {favoritesCount}
+                                        </span>
+                                    )}
+                                </Button>
+                            </Link>
+                        )}
 
-                        {/* Auth Button */}
+                        {/* Auth Button — API Keys visible only for SUPERADMIN */}
                         {isAdmin ? (
                             <div className="hidden md:flex items-center gap-2">
                                 <Link to="/api-keys">
@@ -105,7 +113,7 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                         variant="ghost"
                                         size="icon"
                                         className="hover:text-accent"
-                                        title="API Keys"
+                                        title={t('nav.apiKeys')}
                                     >
                                         <Key className="h-5 w-5" />
                                     </Button>
@@ -126,6 +134,7 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                     variant="ghost"
                                     size="icon"
                                     className="hover:text-accent"
+                                    title={t('login.title')}
                                 >
                                     <LogIn className="h-5 w-5" />
                                 </Button>

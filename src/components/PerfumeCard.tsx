@@ -81,14 +81,13 @@ export function PerfumeCard({ perfume, index = 0 }: PerfumeCardProps) {
           {perfume.notes.top.slice(0, 2).join(', ')}
         </p>
 
-        {/* Price & Rating */}
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-semibold">€{perfume.price}</span>
+        {/* Rating */}
+        {perfume.rating && (
           <div className="flex items-center gap-1">
             <span className="text-amber">★</span>
             <span className="text-sm font-medium">{perfume.rating}</span>
           </div>
-        </div>
+        )}
       </div>
     </article>
   );

@@ -47,11 +47,15 @@ export function useFavorites() {
             if (isLoggedIn) {
                 const already = serverFavorites.includes(perfumeId);
                 if (already) {
-                    await apiRemoveFavorite(perfumeId);
+                    // Optimistic remove — revert if API call fails
                     setServerFavorites((prev) => prev.filter((id) => id !== perfumeId));
+                    const ok = await apiRemoveFavorite(perfumeId);
+                    if (!ok) setServerFavorites((prev) => [...prev, perfumeId]);
                 } else {
-                    await apiAddFavorite(perfumeId);
+                    // Optimistic add — revert if API call fails
                     setServerFavorites((prev) => [...prev, perfumeId]);
+                    const ok = await apiAddFavorite(perfumeId);
+                    if (!ok) setServerFavorites((prev) => prev.filter((id) => id !== perfumeId));
                 }
             } else {
                 const next = localFavorites.includes(perfumeId)
