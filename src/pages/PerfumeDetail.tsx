@@ -226,12 +226,25 @@ const PerfumeDetail = () => {
 
               {/* Meta */}
               <div className="grid grid-cols-2 gap-4 mb-8 py-5 border-y border-border">
-                {perfume.perfumer && (
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.perfumer')}</p>
-                    <p className="font-medium text-sm">{perfume.perfumer.replace(/^perfumers?[,:]?\s*/i, '').trim()}</p>
-                  </div>
-                )}
+                {perfume.perfumer && (() => {
+                  const name = perfume.perfumer.replace(/^perfumers?[,:]?\s*/i, '').trim();
+                  const imgUrl = perfume.perfumerImageUrl || null;
+                  const initials = name.split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+                  return (
+                    <div className="col-span-2">
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t('perfume.perfumer')}</p>
+                      <div className="inline-flex items-center gap-2.5 bg-secondary/60 border border-border/60 rounded-full py-1.5 pl-1.5 pr-4">
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-muted shrink-0">
+                          {imgUrl ? (
+                            <img src={imgUrl} alt={name} className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.nextElementSibling as HTMLElement)!.style.display='flex'; }} />
+                          ) : null}
+                          <span className={`text-[11px] font-semibold text-muted-foreground items-center justify-center w-full h-full${imgUrl ? ' hidden' : ' flex'}`}>{initials}</span>
+                        </div>
+                        <span className="text-sm font-medium leading-tight">{name}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {perfume.year && (
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('perfume.year')}</p>

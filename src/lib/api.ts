@@ -67,6 +67,7 @@ export interface APIPerfume {
     brand: string;
     year?: number;
     perfumer?: string;
+    perfumerImageUrl?: string | null;
     gender?: 'masculine' | 'feminine' | 'unisex';
     concentration?: string;
     notes?: {

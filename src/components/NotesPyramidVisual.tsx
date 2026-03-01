@@ -39,31 +39,6 @@ const DIVIDER_COLOR: Record<NoteCategory, string> = {
   base: 'border-amber/20',
 };
 
-/**
- * When all notes are in a single category (scraper fallback), redistribute them
- * proportionally: ~25% top, ~50% heart, ~25% base.
- */
-function ensureThreeSections(
-  top: string[],
-  heart: string[],
-  base: string[]
-): { top: string[]; heart: string[]; base: string[] } {
-  const filledSections = [top, heart, base].filter((s) => s.length > 0).length;
-  if (filledSections >= 2) return { top, heart, base };
-
-  // Only one section has notes — redistribute
-  const all = [...top, ...heart, ...base];
-  if (all.length === 0) return { top, heart, base };
-
-  const topCount = Math.max(1, Math.round(all.length * 0.25));
-  const baseCount = Math.max(1, Math.round(all.length * 0.25));
-
-  return {
-    top: all.slice(0, topCount),
-    heart: all.slice(topCount, all.length - baseCount),
-    base: all.slice(all.length - baseCount),
-  };
-}
 
 function NoteCard({
   note,
@@ -122,8 +97,9 @@ export function NotesPyramidVisual({ notes, className }: NotesPyramidVisualProps
     return null;
   }
 
-  const { top: topNotes, heart: heartNotes, base: baseNotes } =
-    ensureThreeSections(rawTop, rawHeart, rawBase);
+  const topNotes = rawTop;
+  const heartNotes = rawHeart;
+  const baseNotes = rawBase;
 
   const lang = i18n.language;
 

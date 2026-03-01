@@ -85,7 +85,11 @@ function MetricCard({
   const { t } = useTranslation();
 
   const votes = data.votes ?? {};
-  const dominant = data.dominant;
+  // Derive dominant from actual votes when available — stored value can be stale
+  const derivedDominant = Object.keys(votes).length > 0
+    ? Object.entries(votes).sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0]
+    : undefined;
+  const dominant = derivedDominant ?? data.dominant;
   const maxVotes = Math.max(...Object.values(votes), 1);
 
   const dominantIdx = dominant ? steps.indexOf(dominant) : -1;

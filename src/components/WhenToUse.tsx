@@ -50,7 +50,6 @@ function estimateSeasonUsage(accords: string[], concentration?: string, gender?:
     }
   }
 
-  // Concentration adjustments
   const c = (concentration || '').toLowerCase();
   if (c.includes('extrait') || c.includes('parfum')) {
     scores.night += 15; scores.winter += 10; scores.day -= 10;
@@ -58,14 +57,12 @@ function estimateSeasonUsage(accords: string[], concentration?: string, gender?:
     scores.summer += 15; scores.day += 15; scores.night -= 10;
   }
 
-  // Gender adjustments
   if (gender === 'feminine') {
     scores.spring += 10; scores.day += 5;
   } else if (gender === 'masculine') {
     scores.night += 5; scores.autumn += 5;
   }
 
-  // Normalize so max = 100
   const max = Math.max(...Object.values(scores));
   const result = {} as SeasonUsage;
   for (const k of Object.keys(scores)) {
@@ -74,140 +71,106 @@ function estimateSeasonUsage(accords: string[], concentration?: string, gender?:
   return result;
 }
 
-// ─── CircleRing ──────────────────────────────────────────────────────────────
-
-const RING_SIZE = 88;
-const STROKE = 5.5;
-const RADIUS = (RING_SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-function CircleRing({
-  pct,
-  color,
-  trackColor,
-  icon,
-  label,
-}: {
-  pct: number;
-  color: string;
-  trackColor: string;
-  icon: string;
-  label: string;
-}) {
-  const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
-
-  return (
-    <div className="flex flex-col items-center gap-2.5">
-      {/* Ring + icon */}
-      <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
-        <svg
-          width={RING_SIZE}
-          height={RING_SIZE}
-          className="-rotate-90"
-          style={{ display: 'block' }}
-        >
-          {/* Background track */}
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RADIUS}
-            fill="none"
-            stroke={trackColor}
-            strokeWidth={STROKE}
-          />
-          {/* Progress arc */}
-          <circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RADIUS}
-            fill="none"
-            stroke={color}
-            strokeWidth={STROKE}
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 0.8s ease' }}
-          />
-        </svg>
-
-        {/* Centered content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-          <span className="text-2xl leading-none select-none">{icon}</span>
-          <span
-            className="text-[11px] font-semibold leading-none tabular-nums"
-            style={{ color }}
-          >
-            {pct}%
-          </span>
-        </div>
-      </div>
-
-      {/* Label */}
-      <span className="text-[10px] uppercase tracking-widest text-muted-foreground text-center leading-tight">
-        {label}
-      </span>
-    </div>
-  );
-}
-
-// ─── Category config ─────────────────────────────────────────────────────────
+// ─── Category config ──────────────────────────────────────────────────────────
 
 interface CategoryConfig {
   key: keyof SeasonUsage;
   icon: string;
   color: string;
-  track: string;
   labelKey: string;
 }
 
-const CATEGORIES: CategoryConfig[] = [
-  { key: 'winter',  icon: '❄️',  color: '#60A5FA', track: 'rgba(96,165,250,0.15)',  labelKey: 'whenToUse.winter' },
-  { key: 'spring',  icon: '🌸',  color: '#4ADE80', track: 'rgba(74,222,128,0.15)',  labelKey: 'whenToUse.spring' },
-  { key: 'summer',  icon: '☀️',  color: '#FCA5A5', track: 'rgba(252,165,165,0.15)', labelKey: 'whenToUse.summer' },
-  { key: 'autumn',  icon: '🍂',  color: '#FB923C', track: 'rgba(251,146,60,0.15)',  labelKey: 'whenToUse.autumn' },
-  { key: 'day',     icon: '🌤️', color: '#FCD34D', track: 'rgba(252,211,77,0.15)',  labelKey: 'whenToUse.day' },
-  { key: 'night',   icon: '🌙',  color: '#A5B4FC', track: 'rgba(165,180,252,0.15)', labelKey: 'whenToUse.night' },
+const SEASON_CATEGORIES: CategoryConfig[] = [
+  { key: 'winter', icon: '❄️', color: '#60A5FA', labelKey: 'whenToUse.winter' },
+  { key: 'spring', icon: '🌸', color: '#4ADE80', labelKey: 'whenToUse.spring' },
+  { key: 'summer', icon: '☀️', color: '#FCA5A5', labelKey: 'whenToUse.summer' },
+  { key: 'autumn', icon: '🍂', color: '#FB923C', labelKey: 'whenToUse.autumn' },
 ];
+
+const TIME_CATEGORIES: CategoryConfig[] = [
+  { key: 'day',   icon: '🌤️', color: '#FCD34D', labelKey: 'whenToUse.day' },
+  { key: 'night', icon: '🌙', color: '#A5B4FC', labelKey: 'whenToUse.night' },
+];
+
+// ─── HorizontalBar ────────────────────────────────────────────────────────────
+
+function HorizontalBar({ icon, label, pct, color }: { icon: string; label: string; pct: number; color: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      {/* Icon + label */}
+      <div className="flex items-center gap-1.5 w-24 shrink-0">
+        <span className="text-base leading-none select-none">{icon}</span>
+        <span className="text-[11px] font-medium text-muted-foreground truncate">{label}</span>
+      </div>
+      {/* Bar */}
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+      {/* Score */}
+      <span
+        className="text-[11px] font-semibold tabular-nums w-7 text-right shrink-0"
+        style={{ color }}
+      >
+        {pct}
+      </span>
+    </div>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function WhenToUse({ seasonUsage, accords = [], concentration, gender, className }: WhenToUseProps) {
   const { t } = useTranslation();
 
-  // Use scraped data if available, otherwise estimate from accords
   const isEstimated = !seasonUsage;
   const data: SeasonUsage = seasonUsage ?? estimateSeasonUsage(accords, concentration, gender);
 
-  // Don't render if we have no accords and no scraped data (nothing to show)
   if (!seasonUsage && accords.length === 0) return null;
 
   return (
     <div className={cn('', className)}>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-5">
         <Clock className="h-3.5 w-3.5 text-muted-foreground" />
         <h2 className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">
           {t('whenToUse.title')}
         </h2>
       </div>
 
-      {/* 6-column grid of circular rings */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-4 gap-y-6">
-        {CATEGORIES.map((cat) => (
-          <CircleRing
+      {/* Seasons */}
+      <div className="space-y-2.5 mb-4">
+        {SEASON_CATEGORIES.map((cat) => (
+          <HorizontalBar
             key={cat.key}
-            pct={data[cat.key]}
-            color={cat.color}
-            trackColor={cat.track}
             icon={cat.icon}
             label={t(cat.labelKey)}
+            pct={data[cat.key]}
+            color={cat.color}
           />
         ))}
       </div>
 
-      {/* Subtle note if estimated */}
+      {/* Divider */}
+      <div className="h-px bg-border/50 my-3" />
+
+      {/* Time of day */}
+      <div className="space-y-2.5">
+        {TIME_CATEGORIES.map((cat) => (
+          <HorizontalBar
+            key={cat.key}
+            icon={cat.icon}
+            label={t(cat.labelKey)}
+            pct={data[cat.key]}
+            color={cat.color}
+          />
+        ))}
+      </div>
+
       {isEstimated && (
-        <p className="mt-4 text-[10px] text-muted-foreground/50 text-right">
+        <p className="mt-3 text-[10px] text-muted-foreground/50 text-right">
           {t('whenToUse.estimated')}
         </p>
       )}
