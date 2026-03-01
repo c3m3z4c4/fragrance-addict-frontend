@@ -306,8 +306,9 @@ export function SitemapImporter() {
                 disabled={fetchUrlsMutation.isPending}
               />
             </div>
-            <div className="flex items-end">
-              <Button 
+            <div>
+              <label className="text-sm font-medium mb-1 block invisible select-none">_</label>
+              <Button
                 onClick={() => {
                   setUrlCheckResult(null);
                   fetchUrlsMutation.mutate();
