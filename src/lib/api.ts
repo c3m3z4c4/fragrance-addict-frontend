@@ -1096,11 +1096,13 @@ export async function setAIDefaultModel(model: string): Promise<{ success: boole
 
 export interface FullCatalogResult {
     success: boolean;
+    status?: 'discovering' | 'done';
+    message?: string;
     sitemapsDiscovered: number;
     totalFound: number;
     newQueued: number;
     alreadyExist: number;
-    queueSize: number;
+    queueSize?: number;
     estimatedHours: number;
     estimatedDays: number;
     autoStarted: boolean;

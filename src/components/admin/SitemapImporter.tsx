@@ -170,12 +170,21 @@ export function SitemapImporter() {
     onSuccess: (result) => {
       setShowFullCatalogConfirm(false);
       if (result.success) {
-        setFullCatalogResult(result);
-        refetchStatus();
-        toast({
-          title: 'Full Catalog Import Started',
-          description: `${result.newQueued.toLocaleString()} new perfumes queued from ${result.sitemapsDiscovered} sitemap files`,
-        });
+        if (result.status === 'discovering') {
+          toast({
+            title: 'Discovery Started',
+            description: 'Sitemap discovery is running in the background. URLs will appear in the queue below in a few minutes.',
+          });
+          // Start polling queue status so the user can see URLs being added
+          setTimeout(() => refetchStatus(), 5000);
+        } else {
+          setFullCatalogResult(result);
+          refetchStatus();
+          toast({
+            title: 'Full Catalog Import Started',
+            description: `${result.newQueued.toLocaleString()} new perfumes queued from ${result.sitemapsDiscovered} sitemap files`,
+          });
+        }
       } else {
         toast({ title: 'Import Failed', description: result.error || 'Could not fetch sitemaps', variant: 'destructive' });
       }
@@ -213,6 +222,14 @@ export function SitemapImporter() {
               <p>The queue runs in the backend — you can safely close this page. You can also pause and resume at any time.</p>
             </div>
           </div>
+
+          {/* Discovery in progress */}
+          {fullCatalogMutation.isSuccess && fullCatalogMutation.data?.status === 'discovering' && (
+            <div className="flex items-center gap-2 p-3 bg-accent/10 border border-accent/20 rounded-lg text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-accent shrink-0" />
+              <span>Discovery in progress — URLs are being added to the queue below. This may take a few minutes.</span>
+            </div>
+          )}
 
           {/* Result after import */}
           {fullCatalogResult && (
