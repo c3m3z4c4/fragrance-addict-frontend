@@ -1079,6 +1079,28 @@ export async function updateAboutContent(content: AboutContent): Promise<boolean
 
 // ============= GEMINI AI RECOMMENDATIONS =============
 
+export interface FullCatalogResult {
+    success: boolean;
+    sitemapsDiscovered: number;
+    totalFound: number;
+    newQueued: number;
+    alreadyExist: number;
+    queueSize: number;
+    estimatedHours: number;
+    estimatedDays: number;
+    autoStarted: boolean;
+    error?: string;
+}
+
+export async function importFullCatalog(autoStart = true): Promise<FullCatalogResult> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/catalog/full`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ autoStart }),
+    });
+    return res.json();
+}
+
 export interface GeminiRecommendation {
     name: string;
     brand: string;

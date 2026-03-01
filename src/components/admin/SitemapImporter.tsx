@@ -1,33 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { 
-  fetchSitemapUrls, 
-  addToQueue, 
-  startQueue, 
-  stopQueue, 
-  getQueueStatus, 
+import {
+  fetchSitemapUrls,
+  addToQueue,
+  startQueue,
+  stopQueue,
+  getQueueStatus,
   clearQueue,
   checkExistingUrls,
-  type QueueStatus 
+  importFullCatalog,
+  type QueueStatus,
+  type FullCatalogResult,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Loader2, 
-  Play, 
-  Square, 
-  Trash2, 
-  Download, 
-  Clock, 
-  CheckCircle2, 
+import {
+  Loader2,
+  Play,
+  Square,
+  Trash2,
+  Download,
+  Clock,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   Search,
   Plus,
-  Database
+  Database,
+  Globe,
+  TriangleAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +47,8 @@ export function SitemapImporter() {
   const [limit, setLimit] = useState('50');
   const [urlCheckResult, setUrlCheckResult] = useState<UrlCheckResult | null>(null);
   const [fetchedUrls, setFetchedUrls] = useState<string[]>([]);
+  const [fullCatalogResult, setFullCatalogResult] = useState<FullCatalogResult | null>(null);
+  const [showFullCatalogConfirm, setShowFullCatalogConfirm] = useState(false);
   const queryClient = useQueryClient();
 
   // Poll queue status every 10 seconds when processing (to avoid rate limiting)
@@ -159,12 +165,111 @@ export function SitemapImporter() {
     },
   });
 
+  const fullCatalogMutation = useMutation({
+    mutationFn: () => importFullCatalog(true),
+    onSuccess: (result) => {
+      setShowFullCatalogConfirm(false);
+      if (result.success) {
+        setFullCatalogResult(result);
+        refetchStatus();
+        toast({
+          title: 'Full Catalog Import Started',
+          description: `${result.newQueued.toLocaleString()} new perfumes queued from ${result.sitemapsDiscovered} sitemap files`,
+        });
+      } else {
+        toast({ title: 'Import Failed', description: result.error || 'Could not fetch sitemaps', variant: 'destructive' });
+      }
+    },
+    onError: (error: Error) => {
+      setShowFullCatalogConfirm(false);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const progress = queueStatus?.total 
     ? ((queueStatus.processed + queueStatus.failed) / queueStatus.total) * 100 
     : 0;
 
   return (
     <div className="space-y-6">
+
+      {/* Full Catalog Import Card */}
+      <Card className="border-accent/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-accent" />
+            Full Catalog Import
+          </CardTitle>
+          <CardDescription>
+            Import all ~123,000 perfumes from Fragrantica by reading its public sitemaps. Already-scraped perfumes are skipped automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Warning */}
+          <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm">
+            <TriangleAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-muted-foreground">
+              <p><strong className="text-foreground">Time estimate:</strong> ~123K perfumes × 15 s = <strong className="text-foreground">~21 days</strong> of continuous processing at Fragrantica's safe rate limit.</p>
+              <p>The queue runs in the backend — you can safely close this page. You can also pause and resume at any time.</p>
+            </div>
+          </div>
+
+          {/* Result after import */}
+          {fullCatalogResult && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-xl font-bold">{fullCatalogResult.sitemapsDiscovered}</p>
+                <p className="text-xs text-muted-foreground">Sitemaps read</p>
+              </div>
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-xl font-bold">{fullCatalogResult.totalFound.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Total found</p>
+              </div>
+              <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                <p className="text-xl font-bold text-green-600">{fullCatalogResult.newQueued.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">New queued</p>
+              </div>
+              <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <p className="text-xl font-bold text-amber-600">{fullCatalogResult.alreadyExist.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Already exist</p>
+              </div>
+            </div>
+          )}
+
+          {/* Confirm / Launch */}
+          {!showFullCatalogConfirm ? (
+            <Button
+              variant="outline"
+              className="border-accent/40 hover:border-accent"
+              onClick={() => setShowFullCatalogConfirm(true)}
+              disabled={fullCatalogMutation.isPending}
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Import Full Fragrantica Catalog
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm flex-1">This will queue tens of thousands of URLs. Confirm?</p>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => fullCatalogMutation.mutate()}
+                disabled={fullCatalogMutation.isPending}
+              >
+                {fullCatalogMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Reading sitemaps…</>
+                ) : (
+                  'Yes, import all'
+                )}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowFullCatalogConfirm(false)} disabled={fullCatalogMutation.isPending}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Fetch URLs Card */}
       <Card>
         <CardHeader>
