@@ -570,6 +570,8 @@ export interface QueueStatus {
     failed: number;
     remaining: number;
     total: number;
+    processedThisSession?: number;
+    failedThisSession?: number;
     startedAt: string | null;
     errors: Array<{ url: string; error: string; time: string }>;
 }
@@ -720,16 +722,23 @@ export async function getQueueStatus(): Promise<QueueStatus> {
     return data;
 }
 
-// Clear queue
-export async function clearQueue(): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE_URL}/api/scrape/queue`, {
-        method: 'DELETE',
-        headers: {
-            ...getAuthHeader(),
-        },
-    });
-
+// Clear queue (all, or by status: 'pending' | 'done' | 'failed')
+export async function clearQueue(status?: string): Promise<{ success: boolean; deleted?: number }> {
+    const url = status
+        ? `${API_BASE_URL}/api/scrape/queue?status=${status}`
+        : `${API_BASE_URL}/api/scrape/queue`;
+    const response = await fetch(url, { method: 'DELETE', headers: getAuthHeader() });
     if (!response.ok) throw new Error('Failed to clear queue');
+    return response.json();
+}
+
+// Retry all failed queue entries
+export async function retryFailedQueue(): Promise<{ success: boolean; retried: number }> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape/queue/retry-failed`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+    });
+    if (!response.ok) throw new Error('Failed to retry failed URLs');
     return response.json();
 }
 

@@ -7,6 +7,7 @@ import {
   stopQueue,
   getQueueStatus,
   clearQueue,
+  retryFailedQueue,
   checkExistingUrls,
   importFullCatalog,
   type QueueStatus,
@@ -32,6 +33,8 @@ import {
   Database,
   Globe,
   TriangleAlert,
+  RotateCcw,
+  Pause,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -158,10 +161,29 @@ export function SitemapImporter() {
   });
 
   const clearMutation = useMutation({
-    mutationFn: clearQueue,
-    onSuccess: () => {
-      toast({ title: 'Queue Cleared' });
+    mutationFn: () => clearQueue('pending'),
+    onSuccess: (res) => {
+      toast({ title: 'Pending queue cleared', description: `${res.deleted ?? 0} entries removed` });
       refetchStatus();
+    },
+  });
+
+  const clearFailedMutation = useMutation({
+    mutationFn: () => clearQueue('failed'),
+    onSuccess: (res) => {
+      toast({ title: 'Failed entries cleared', description: `${res.deleted ?? 0} entries removed` });
+      refetchStatus();
+    },
+  });
+
+  const retryFailedMutation = useMutation({
+    mutationFn: retryFailedQueue,
+    onSuccess: (res) => {
+      toast({ title: 'Retrying failed URLs', description: `${res.retried} URLs moved back to pending` });
+      refetchStatus();
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     },
   });
 
@@ -432,7 +454,7 @@ export function SitemapImporter() {
             </div>
           )}
 
-          {/* Stats Grid */}
+          {/* Stats Grid — counts come from DB, survive restarts */}
           <div className="grid grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold">{queueStatus?.remaining || 0}</p>
@@ -440,7 +462,7 @@ export function SitemapImporter() {
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-lg">
               <p className="text-2xl font-bold text-green-500">{queueStatus?.processed || 0}</p>
-              <p className="text-xs text-muted-foreground">Processed</p>
+              <p className="text-xs text-muted-foreground">Done</p>
             </div>
             <div className="text-center p-3 bg-destructive/10 rounded-lg">
               <p className="text-2xl font-bold text-destructive">{queueStatus?.failed || 0}</p>
@@ -456,48 +478,93 @@ export function SitemapImporter() {
           {queueStatus?.current && (
             <div className="p-3 bg-accent/10 rounded-lg flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-accent" />
-              <span className="text-sm truncate">
-                Processing: {queueStatus.current}
-              </span>
+              <span className="text-sm truncate">Scraping: {queueStatus.current}</span>
             </div>
           )}
 
+          {/* Session stats (resets each time you hit Start) */}
+          {queueStatus?.processing && (queueStatus.processedThisSession ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground">
+              This session: {queueStatus.processedThisSession} processed · {queueStatus.failedThisSession} failed
+            </p>
+          )}
+
           {/* Controls */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!queueStatus?.processing ? (
-              <Button 
+              <Button
                 onClick={() => startMutation.mutate()}
                 disabled={!queueStatus?.remaining || startMutation.isPending}
+                className="gap-2"
               >
-                <Play className="h-4 w-4 mr-2" />
-                Start Processing
+                {startMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                {queueStatus?.remaining ? `Resume (${queueStatus.remaining.toLocaleString()} pending)` : 'Start'}
               </Button>
             ) : (
-              <Button 
-                variant="destructive"
+              <Button
+                variant="outline"
                 onClick={() => stopMutation.mutate()}
                 disabled={stopMutation.isPending}
+                className="gap-2"
               >
-                <Square className="h-4 w-4 mr-2" />
-                Stop
+                <Pause className="h-4 w-4" />
+                Pause
               </Button>
             )}
-            <Button 
+
+            {/* Retry failed */}
+            {(queueStatus?.failed ?? 0) > 0 && !queueStatus?.processing && (
+              <Button
+                variant="outline"
+                onClick={() => retryFailedMutation.mutate()}
+                disabled={retryFailedMutation.isPending}
+                className="gap-2"
+              >
+                {retryFailedMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                Retry {queueStatus!.failed} Failed
+              </Button>
+            )}
+
+            {/* Clear pending */}
+            <Button
               variant="outline"
               onClick={() => clearMutation.mutate()}
-              disabled={queueStatus?.processing || clearMutation.isPending}
+              disabled={queueStatus?.processing || clearMutation.isPending || !queueStatus?.remaining}
+              className="gap-2"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Queue
+              <Trash2 className="h-4 w-4" />
+              Clear Pending
             </Button>
+
+            {/* Clear completed */}
+            {(queueStatus?.processed ?? 0) > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clearFailedMutation.mutate()}
+                disabled={clearFailedMutation.isPending}
+                className="gap-2 text-muted-foreground"
+              >
+                <Trash2 className="h-3 w-3" />
+                Clear Failed
+              </Button>
+            )}
           </div>
+
+          {/* Pause notice */}
+          {!queueStatus?.processing && (queueStatus?.remaining ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              Queue is paused — {queueStatus!.remaining.toLocaleString()} URLs waiting. Hit Resume to continue from where it left off.
+            </p>
+          )}
 
           {/* Recent Errors */}
           {queueStatus?.errors && queueStatus.errors.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-destructive" />
-                Recent Errors
+                Recent Errors (this session)
               </p>
               <div className="max-h-32 overflow-y-auto space-y-1">
                 {queueStatus.errors.map((err, i) => (
