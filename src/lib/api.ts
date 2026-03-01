@@ -1079,6 +1079,20 @@ export async function updateAboutContent(content: AboutContent): Promise<boolean
 
 // ============= GEMINI AI RECOMMENDATIONS =============
 
+export async function getAIConfig(): Promise<{ model: string; models: string[] }> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/config`, { headers: getAuthHeader() });
+    return res.json();
+}
+
+export async function setAIDefaultModel(model: string): Promise<{ success: boolean; model: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/config`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ model }),
+    });
+    return res.json();
+}
+
 export interface FullCatalogResult {
     success: boolean;
     sitemapsDiscovered: number;

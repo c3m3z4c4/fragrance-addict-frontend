@@ -11,8 +11,9 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { BrandScraper } from '@/components/admin/BrandScraper';
 import { ResetPanel } from '@/components/admin/ResetPanel';
 import { AboutEditor } from '@/components/admin/AboutEditor';
+import { AISettings } from '@/components/admin/AISettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -87,7 +88,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-5xl grid-cols-10">
+          <TabsList className="grid w-full max-w-5xl grid-cols-11">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -123,6 +124,10 @@ export default function Admin() {
             <TabsTrigger value="about" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">About</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">AI</span>
             </TabsTrigger>
             <TabsTrigger value="reset" className="flex items-center gap-2 text-destructive data-[state=active]:text-destructive">
               <Trash2 className="h-4 w-4" />
@@ -164,6 +169,10 @@ export default function Admin() {
 
           <TabsContent value="about" className="animate-fade-in">
             <AboutEditor />
+          </TabsContent>
+
+          <TabsContent value="ai" className="animate-fade-in">
+            <AISettings />
           </TabsContent>
 
           <TabsContent value="reset" className="animate-fade-in">
