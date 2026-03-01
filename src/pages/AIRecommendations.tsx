@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, RefreshCw, Search, AlertCircle, Lock, ChevronDown, ChevronUp, User } from 'lucide-react';
+
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -40,11 +41,6 @@ const INTENSITIES = [
 const PROFILE_KEY = 'ai_user_profile';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function isGmailUser(user: { email: string; provider: string } | null): boolean {
-    if (!user) return false;
-    return user.provider === 'google' || user.email.toLowerCase().endsWith('@gmail.com');
-}
 
 function Pill({
     active, onClick, children,
@@ -93,8 +89,6 @@ export default function AIRecommendations() {
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     }, [profile]);
 
-    const gmailUser = isGmailUser(user);
-
     // Count filled profile fields
     const profileFilled = [
         profile.ageRange,
@@ -129,7 +123,7 @@ export default function AIRecommendations() {
         } else {
             setRecommendations(result.recommendations);
             setBasedOn(result.basedOnFavorites);
-            setUsedModel(result.model || selectedModel);
+            setUsedModel(result.model || '');
         }
     };
 
@@ -149,27 +143,6 @@ export default function AIRecommendations() {
                             {t('ai.loginDesc', { defaultValue: 'Sign in with your Google account to get AI-powered perfume recommendations.' })}
                         </p>
                         <Button onClick={() => navigate('/login')}>{t('login.title', { defaultValue: 'Log in' })}</Button>
-                    </div>
-                </main>
-                <Footer />
-            </div>
-        );
-    }
-
-    if (!gmailUser) {
-        return (
-            <div className="min-h-screen flex flex-col">
-                <Header />
-                <main className="flex-1 flex items-center justify-center">
-                    <div className="text-center max-w-md px-4">
-                        <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h1 className="font-display text-2xl font-medium mb-3">
-                            {t('ai.gmailRequired', { defaultValue: 'Gmail account required' })}
-                        </h1>
-                        <p className="text-muted-foreground mb-6">
-                            {t('ai.gmailDesc', { defaultValue: 'AI recommendations are powered by Google Gemini and require a Gmail or Google account.' })}
-                        </p>
-                        <Button onClick={() => navigate('/login')}>{t('ai.switchToGoogle', { defaultValue: 'Sign in with Google' })}</Button>
                     </div>
                 </main>
                 <Footer />

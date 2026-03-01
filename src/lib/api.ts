@@ -1131,6 +1131,44 @@ export interface AIUserProfile {
     intensity?: string;
 }
 
+export interface DuplicateGroup {
+    name: string;
+    brand: string;
+    count: number;
+    duplicates: { id: number; name: string; brand: string; sourceUrl: string; rating: number }[];
+}
+
+export async function fetchDuplicates(): Promise<{ data: DuplicateGroup[]; count: number; error?: string }> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/scrape/duplicates`, {
+            headers: getAuthHeader(),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { data: [], count: 0, error: data.error || 'Request failed' };
+        }
+        return res.json();
+    } catch {
+        return { data: [], count: 0, error: 'Network error' };
+    }
+}
+
+export async function deleteDuplicates(): Promise<{ deleted: number; error?: string }> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/scrape/duplicates`, {
+            method: 'DELETE',
+            headers: getAuthHeader(),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { deleted: 0, error: data.error || 'Request failed' };
+        }
+        return res.json();
+    } catch {
+        return { deleted: 0, error: 'Network error' };
+    }
+}
+
 export async function fetchAIRecommendations(
     model?: string,
     profile?: AIUserProfile

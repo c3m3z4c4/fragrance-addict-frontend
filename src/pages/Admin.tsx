@@ -12,8 +12,9 @@ import { BrandScraper } from '@/components/admin/BrandScraper';
 import { ResetPanel } from '@/components/admin/ResetPanel';
 import { AboutEditor } from '@/components/admin/AboutEditor';
 import { AISettings } from '@/components/admin/AISettings';
+import { DuplicateManager } from '@/components/admin/DuplicateManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -88,7 +89,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-5xl grid-cols-11">
+          <TabsList className="grid w-full max-w-5xl grid-cols-12">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -120,6 +121,10 @@ export default function Admin() {
             <TabsTrigger value="brands" className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">Brands</span>
+            </TabsTrigger>
+            <TabsTrigger value="duplicates" className="flex items-center gap-2">
+              <Copy className="h-4 w-4" />
+              <span className="hidden sm:inline">Dupes</span>
             </TabsTrigger>
             <TabsTrigger value="about" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -165,6 +170,10 @@ export default function Admin() {
 
           <TabsContent value="brands" className="animate-fade-in">
             <BrandScraper />
+          </TabsContent>
+
+          <TabsContent value="duplicates" className="animate-fade-in">
+            <DuplicateManager />
           </TabsContent>
 
           <TabsContent value="about" className="animate-fade-in">
