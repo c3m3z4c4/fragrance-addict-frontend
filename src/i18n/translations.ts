@@ -169,6 +169,13 @@ export const translations = {
         contact: 'Contact',
         copyright: 'All rights reserved.',
       },
+      // Catalog section (home page)
+      catalog: {
+        recentlyAdded: 'Recently Added',
+        exploreLatest: 'Explore the latest additions to our fragrance catalog',
+        empty: 'No fragrances in the catalog yet',
+        addViaScraping: 'Add fragrances from the admin panel',
+      },
       // Login
       login: {
         title: 'Admin Access',
@@ -361,6 +368,13 @@ export const translations = {
         privacy: 'Política de Privacidad',
         contact: 'Contacto',
         copyright: 'Todos los derechos reservados.',
+      },
+      // Catalog section (home page)
+      catalog: {
+        recentlyAdded: 'Recién Agregados',
+        exploreLatest: 'Explora las últimas incorporaciones a nuestro catálogo de fragancias',
+        empty: 'Aún no hay fragancias en el catálogo',
+        addViaScraping: 'Agrega fragancias desde el panel de administración',
       },
       // Login
       login: {

@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ['Dosis', 'sans-serif'],
         body: ['Dosis', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
