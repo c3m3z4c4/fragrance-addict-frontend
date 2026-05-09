@@ -23,9 +23,10 @@ interface AuthContextType {
     isSuperAdmin: boolean;
     isAdmin: boolean;
     login: (email: string, password: string) => Promise<boolean>;
+    register: (email: string, name: string, password: string) => Promise<{ success: boolean; error?: string }>;
     loginWithGoogle: () => void;
     logout: () => void;
-    updateProfile: (fields: { name?: string; avatarUrl?: string }) => Promise<boolean>;
+    updateProfile: (fields: { name?: string; avatarUrl?: string; email?: string }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,6 +125,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const register = async (email: string, name: string, password: string): Promise<{ success: boolean; error?: string }> => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name, password }),
+            });
+            const data = await res.json();
+            if (!res.ok) return { success: false, error: data.error || 'Registration failed' };
+            localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+            setUser(data.user);
+            scheduleExpiry(data.token);
+            return { success: true };
+        } catch {
+            return { success: false, error: 'Network error' };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const loginWithGoogle = () => {
         window.location.href = `${API_BASE_URL}/api/auth/google`;
     };
@@ -158,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isSuperAdmin,
                 isAdmin: isSuperAdmin,
                 login,
+                register,
                 loginWithGoogle,
                 logout,
                 updateProfile,

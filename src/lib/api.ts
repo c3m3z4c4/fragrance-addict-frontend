@@ -1009,6 +1009,25 @@ export async function adminUpdateUser(
     return { success: true };
 }
 
+export async function registerUser(
+    email: string,
+    name: string,
+    password: string
+): Promise<{ success: boolean; token?: string; user?: unknown; error?: string }> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) return { success: false, error: data.error || 'Registration failed' };
+        return { success: true, token: data.token, user: data.user };
+    } catch {
+        return { success: false, error: 'Network error' };
+    }
+}
+
 export async function updateMyEmail(email: string): Promise<{ success: boolean; error?: string }> {
     const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
         method: 'PATCH',
