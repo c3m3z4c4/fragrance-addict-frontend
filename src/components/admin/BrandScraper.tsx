@@ -7,6 +7,7 @@ import {
     startQueue,
     stopQueue,
     fetchBrandLogos,
+    fetchBrandsWithoutLogos,
     type BrandScrapeResult,
     type BrandLogoResult,
     type QueueStatus,
@@ -29,7 +30,6 @@ import {
     Loader2,
     Play,
     Pause,
-    Square,
     X,
     Plus,
     Layers,
@@ -37,6 +37,9 @@ import {
     XCircle,
     AlertTriangle,
     ImageIcon,
+    Copy,
+    Check,
+    List,
 } from 'lucide-react';
 
 interface BrandResult extends BrandScrapeResult {
@@ -59,6 +62,11 @@ export function BrandScraper() {
     // Logo fetching state
     const [isFetchingLogos, setIsFetchingLogos] = useState(false);
     const [logoResults, setLogoResults] = useState<{ updated: number; failed: number; results: BrandLogoResult[] } | null>(null);
+
+    // Brands without logos
+    const [isFetchingMissing, setIsFetchingMissing] = useState(false);
+    const [missingLogos, setMissingLogos] = useState<string[] | null>(null);
+    const [copied, setCopied] = useState(false);
 
     // Queue status
     const { data: queueStatus } = useQuery<QueueStatus>({
@@ -89,10 +97,33 @@ export function BrandScraper() {
         if (e.key === 'Enter') { e.preventDefault(); addBrand(); }
     };
 
+    const handleFetchMissingList = async () => {
+        setIsFetchingMissing(true);
+        try {
+            const result = await fetchBrandsWithoutLogos();
+            if (result.success) {
+                setMissingLogos(result.brands);
+            } else {
+                toast.error(result.error ?? 'Failed to load list');
+            }
+        } catch {
+            toast.error('Failed to load list');
+        } finally {
+            setIsFetchingMissing(false);
+        }
+    };
+
+    const handleCopyMissing = () => {
+        if (!missingLogos) return;
+        navigator.clipboard.writeText(missingLogos.join('\n'));
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     const handleFetchLogos = async () => {
         setIsFetchingLogos(true);
         setLogoResults(null);
-        toast.info('Fetching brand logos from Clearbit… this may take a few minutes.');
+        toast.info('Searching Wikimedia Commons for brand logos… this may take a few minutes.');
         try {
             const result = await fetchBrandLogos();
             if (result.success) {
@@ -369,14 +400,71 @@ export function BrandScraper() {
                 </CardContent>
             </Card>
 
-            {/* Brand Logos via Clearbit */}
+            {/* Brands without logos */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <List className="h-5 w-5" /> Brands Without Logos
+                    </CardTitle>
+                    <CardDescription>
+                        Get the list of brands that still have no logo in the database. Copy it and search for logos manually.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Button
+                        variant="outline"
+                        onClick={handleFetchMissingList}
+                        disabled={isFetchingMissing}
+                        className="w-full sm:w-auto"
+                    >
+                        {isFetchingMissing ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading…</>
+                        ) : (
+                            <><List className="h-4 w-4 mr-2" /> Show Brands Without Logo</>
+                        )}
+                    </Button>
+
+                    {missingLogos !== null && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {missingLogos.length} brands without logo
+                                </p>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleCopyMissing}
+                                    disabled={missingLogos.length === 0}
+                                >
+                                    {copied ? <><Check className="h-3.5 w-3.5 mr-1 text-green-600" /> Copied!</> : <><Copy className="h-3.5 w-3.5 mr-1" /> Copy list</>}
+                                </Button>
+                            </div>
+                            {missingLogos.length > 0 ? (
+                                <div className="rounded-md border bg-muted/30 p-3 max-h-60 overflow-y-auto">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                        {missingLogos.map(name => (
+                                            <span key={name} className="text-xs truncate text-muted-foreground py-0.5">
+                                                {name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-green-600 font-medium">All brands have logos!</p>
+                            )}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Brand Logos via multi-source fetcher */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <ImageIcon className="h-5 w-5" /> Brand Logos
                     </CardTitle>
                     <CardDescription>
-                        Fetch official brand logos from Clearbit for all brands in the catalog. Replaces bottle photos with proper logos.
+                        Search Wikimedia Commons and other sources for official brand logos. Only strict logo files (SVG/PNG with "logo" in filename) are accepted — no portrait photos.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -394,7 +482,7 @@ export function BrandScraper() {
 
                     {isFetchingLogos && (
                         <p className="text-xs text-muted-foreground animate-pulse">
-                            Querying Clearbit for each brand… ~120ms per brand, may take a few minutes for large catalogs.
+                            Searching Wikimedia Commons for SVG/PNG logo files… only strict logo matches accepted.
                         </p>
                     )}
 

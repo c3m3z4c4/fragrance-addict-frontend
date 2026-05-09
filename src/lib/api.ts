@@ -1114,6 +1114,22 @@ export async function fetchBrandLogos(): Promise<{
     return res.json();
 }
 
+export async function fetchBrandsWithoutLogos(): Promise<{
+    success: boolean;
+    total: number;
+    brands: string[];
+    error?: string;
+}> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/without-logos`, {
+        headers: { ...getAuthHeader() },
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, total: 0, brands: [], error: data.error };
+    }
+    return res.json();
+}
+
 export async function scrapeBrand(
     brand: string,
     options: { limit?: number; autoStart?: boolean } = {}
