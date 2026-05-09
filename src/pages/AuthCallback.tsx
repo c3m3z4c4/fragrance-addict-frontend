@@ -23,7 +23,7 @@ export default function AuthCallback() {
             .then(async (res) => {
                 if (!res.ok) throw new Error('auth_failed');
                 const { user } = await res.json();
-                navigate(user.role === 'SUPERADMIN' ? '/admin' : '/', { replace: true });
+                navigate(user.role === 'SUPERADMIN' ? '/admin' : '/profile', { replace: true });
             })
             .catch(() => {
                 localStorage.removeItem(AUTH_TOKEN_KEY);

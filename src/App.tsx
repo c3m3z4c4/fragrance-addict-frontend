@@ -18,6 +18,8 @@ import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import { ApiKeys } from './pages/ApiKeys';
 import AIRecommendations from './pages/AIRecommendations';
+import Profile from './pages/Profile';
+import ActivityMonitor from './pages/ActivityMonitor';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -76,6 +78,14 @@ function AppRoutes() {
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
+                path="/profile"
+                element={
+                    <RequireAuth>
+                        <Profile />
+                    </RequireAuth>
+                }
+            />
+            <Route
                 path="/api-keys"
                 element={
                     <ProtectedRoute>
@@ -88,6 +98,14 @@ function AppRoutes() {
                 element={
                     <ProtectedRoute>
                         <Admin />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/admin/activity"
+                element={
+                    <ProtectedRoute>
+                        <ActivityMonitor />
                     </ProtectedRoute>
                 }
             />

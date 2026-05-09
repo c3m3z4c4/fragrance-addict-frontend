@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Heart, Share2, Star } from 'lucide-react';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBrands } from '@/lib/api';
+import { useActivity } from '@/hooks/useActivity';
 
 const PerfumeDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ const PerfumeDetail = () => {
   const { t } = useTranslation();
   const { toggleFavorite, isFavorite } = useFavorites();
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const { logEvent } = useActivity();
 
   const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
   const { data: allPerfumes } = usePerfumes(1, 50);
@@ -37,6 +39,12 @@ const PerfumeDetail = () => {
   const similarPerfumes = perfume && allPerfumes?.perfumes
     ? findSimilarPerfumes(perfume, allPerfumes.perfumes, 4)
     : [];
+
+  useEffect(() => {
+    if (perfume?.id && perfume?.name) {
+      logEvent('perfume_view', perfume.id, perfume.name, { brand: perfume.brand });
+    }
+  }, [perfume?.id, perfume?.name]);
 
   const handleShare = async () => {
     if (!perfume) return;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdminPerfumeList } from '@/components/admin/AdminPerfumeList';
@@ -23,6 +24,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('perfumes');
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const navigate = useNavigate();
 
   const checkBackend = async () => {
     setBackendStatus('checking');
@@ -55,37 +57,46 @@ export default function Admin() {
             </p>
           </div>
 
-          {/* Backend Status */}
-          <Card className="flex-shrink-0">
-            <CardHeader className="py-2 px-4">
-              <div className="flex items-center gap-2">
-                {backendStatus === 'checking' && (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Checking…
-                  </span>
-                )}
-                {backendStatus === 'online' && (
-                  <span className="flex items-center gap-1.5 text-xs text-green-600">
-                    <Wifi className="h-3 w-3" /> Backend Online
-                  </span>
-                )}
-                {backendStatus === 'offline' && (
-                  <span className="flex items-center gap-1.5 text-xs text-destructive">
-                    <WifiOff className="h-3 w-3" /> Backend Offline
-                  </span>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={checkBackend}
-                  disabled={backendStatus === 'checking'}
-                >
-                  <RefreshCw className={`h-3 w-3 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
+          {/* Quick actions + Status */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/activity')}
+              className="text-[11px] tracking-[0.1em] uppercase font-bold gap-1.5">
+              <Activity className="h-3.5 w-3.5" />
+              Activity
+            </Button>
+
+            {/* Backend Status */}
+            <Card className="flex-shrink-0">
+              <CardHeader className="py-2 px-4">
+                <div className="flex items-center gap-2">
+                  {backendStatus === 'checking' && (
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Checking…
+                    </span>
+                  )}
+                  {backendStatus === 'online' && (
+                    <span className="flex items-center gap-1.5 text-xs text-green-600">
+                      <Wifi className="h-3 w-3" /> Backend Online
+                    </span>
+                  )}
+                  {backendStatus === 'offline' && (
+                    <span className="flex items-center gap-1.5 text-xs text-destructive">
+                      <WifiOff className="h-3 w-3" /> Backend Offline
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={checkBackend}
+                    disabled={backendStatus === 'checking'}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Search, X } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { GenderFilterButtons, type GenderFilter } from '@/components/GenderFilterButtons';
 import { fetchPerfumesByBrand } from '@/lib/api';
+import { useActivity } from '@/hooks/useActivity';
 
 const BrandDetail = () => {
   const { brand } = useParams<{ brand: string }>();
@@ -17,6 +18,7 @@ const BrandDetail = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
+  const { logEvent } = useActivity();
 
   const decodedBrand = brand ? decodeURIComponent(brand) : '';
 
@@ -26,6 +28,12 @@ const BrandDetail = () => {
     enabled: !!decodedBrand,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (decodedBrand) {
+      logEvent('brand_search', decodedBrand, decodedBrand);
+    }
+  }, [decodedBrand]);
 
   const filtered = useMemo(() => {
     let result = perfumes;

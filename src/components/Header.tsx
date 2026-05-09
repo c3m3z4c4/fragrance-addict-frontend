@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Heart, Search, Menu, X, LogIn, LogOut, Key } from 'lucide-react';
+import { Heart, Search, Menu, X, LogIn, LogOut, Key, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
@@ -121,36 +121,31 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                             </Link>
                         )}
 
-                        {isAdmin ? (
+                        {isLoggedIn ? (
                             <div className="hidden md:flex items-center gap-1">
-                                <Link to="/api-keys">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="hover:text-accent"
-                                        title={t('nav.apiKeys')}
-                                    >
-                                        <Key className="h-[18px] w-[18px]" />
+                                <Link to="/profile">
+                                    <Button variant="ghost" size="icon" className="hover:text-accent" title="Profile">
+                                        {user?.avatarUrl ? (
+                                            <img src={user.avatarUrl} alt={user.name ?? ''} className="h-6 w-6 rounded-full object-cover" />
+                                        ) : (
+                                            <UserCircle className="h-[18px] w-[18px]" />
+                                        )}
                                     </Button>
                                 </Link>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={logout}
-                                    className="hover:text-accent"
-                                    title={t('login.logout')}
-                                >
+                                {isAdmin && (
+                                    <Link to="/api-keys">
+                                        <Button variant="ghost" size="icon" className="hover:text-accent" title={t('nav.apiKeys')}>
+                                            <Key className="h-[18px] w-[18px]" />
+                                        </Button>
+                                    </Link>
+                                )}
+                                <Button variant="ghost" size="icon" onClick={logout} className="hover:text-accent" title={t('login.logout')}>
                                     <LogOut className="h-[18px] w-[18px]" />
                                 </Button>
                             </div>
                         ) : (
                             <Link to="/login" className="hidden md:block">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="hover:text-accent"
-                                    title={t('login.title')}
-                                >
+                                <Button variant="ghost" size="icon" className="hover:text-accent" title={t('login.title')}>
                                     <LogIn className="h-[18px] w-[18px]" />
                                 </Button>
                             </Link>
@@ -190,28 +185,26 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                                 {link.label}
                             </Link>
                         ))}
-                        {isAdmin ? (
+                        {isLoggedIn ? (
                             <>
-                                <Link
-                                    to="/api-keys"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
-                                >
-                                    {t('nav.apiKeys')}
+                                <Link to="/profile" onClick={() => setIsMenuOpen(false)}
+                                    className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+                                    Profile
                                 </Link>
-                                <button
-                                    onClick={() => { logout(); setIsMenuOpen(false); }}
-                                    className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors w-full text-left"
-                                >
+                                {isAdmin && (
+                                    <Link to="/api-keys" onClick={() => setIsMenuOpen(false)}
+                                        className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
+                                        {t('nav.apiKeys')}
+                                    </Link>
+                                )}
+                                <button onClick={() => { logout(); setIsMenuOpen(false); }}
+                                    className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors w-full text-left">
                                     {t('login.logout')}
                                 </button>
                             </>
                         ) : (
-                            <Link
-                                to="/login"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors"
-                            >
+                            <Link to="/login" onClick={() => setIsMenuOpen(false)}
+                                className="block py-3 text-[11px] font-bold tracking-[0.18em] uppercase text-foreground/55 hover:text-foreground transition-colors">
                                 {t('login.title')}
                             </Link>
                         )}

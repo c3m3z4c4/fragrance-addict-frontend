@@ -3,6 +3,7 @@ import React, {
     useContext,
     useState,
     useEffect,
+    useCallback,
     ReactNode,
 } from 'react';
 import { API_BASE_URL } from '@/lib/api';
@@ -20,11 +21,11 @@ interface AuthContextType {
     user: AuthUser | null;
     isLoading: boolean;
     isSuperAdmin: boolean;
-    /** Legacy alias — used by components that check isAdmin */
     isAdmin: boolean;
     login: (email: string, password: string) => Promise<boolean>;
     loginWithGoogle: () => void;
     logout: () => void;
+    updateProfile: (fields: { name?: string; avatarUrl?: string }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,14 +36,51 @@ export function getAuthToken(): string {
     return localStorage.getItem(AUTH_TOKEN_KEY) || '';
 }
 
+function getTokenExpiry(token: string): number | null {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp ? payload.exp * 1000 : null;
+    } catch {
+        return null;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const doLogout = useCallback(() => {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setUser(null);
+    }, []);
+
+    // Schedule auto-logout when token expires
+    const scheduleExpiry = useCallback((token: string) => {
+        const expiry = getTokenExpiry(token);
+        if (!expiry) return;
+        const msUntilExpiry = expiry - Date.now();
+        if (msUntilExpiry <= 0) {
+            doLogout();
+            return;
+        }
+        const timerId = window.setTimeout(() => {
+            doLogout();
+        }, msUntilExpiry);
+        return () => clearTimeout(timerId);
+    }, [doLogout]);
 
     // Verify stored JWT on mount
     useEffect(() => {
         const token = getAuthToken();
         if (!token) {
+            setIsLoading(false);
+            return;
+        }
+
+        // Check expiry before hitting network
+        const expiry = getTokenExpiry(token);
+        if (expiry && expiry < Date.now()) {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
             setIsLoading(false);
             return;
         }
@@ -54,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (res.ok) {
                     const { user } = await res.json();
                     setUser(user);
+                    scheduleExpiry(token);
                 } else {
                     localStorage.removeItem(AUTH_TOKEN_KEY);
                 }
@@ -62,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.removeItem(AUTH_TOKEN_KEY);
             })
             .finally(() => setIsLoading(false));
-    }, []);
+    }, [scheduleExpiry]);
 
     const login = async (email: string, password: string): Promise<boolean> => {
         setIsLoading(true);
@@ -76,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { token, user } = await res.json();
             localStorage.setItem(AUTH_TOKEN_KEY, token);
             setUser(user);
+            scheduleExpiry(token);
             return true;
         } catch {
             return false;
@@ -88,9 +128,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.href = `${API_BASE_URL}/api/auth/google`;
     };
 
-    const logout = () => {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        setUser(null);
+    const logout = doLogout;
+
+    const updateProfile = async (fields: { name?: string; avatarUrl?: string }): Promise<boolean> => {
+        const token = getAuthToken();
+        if (!token || !user) return false;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(fields),
+            });
+            if (!res.ok) return false;
+            const { user: updated } = await res.json();
+            setUser(updated);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     const isSuperAdmin = user?.role === 'SUPERADMIN';
@@ -105,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 login,
                 loginWithGoogle,
                 logout,
+                updateProfile,
             }}
         >
             {children}
@@ -120,7 +176,6 @@ export function useAuth() {
     return context;
 }
 
-// Legacy helpers kept for backward compatibility with existing hooks/components
 export function getStoredAdminKey(): string {
     return getAuthToken();
 }

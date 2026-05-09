@@ -15,8 +15,9 @@ export const translations = {
         search: 'Search',
         back: 'Back',
         loading: 'Loading...',
-        error: 'Error',
+        error: 'Something went wrong',
         save: 'Save',
+        saving: 'Saving...',
         cancel: 'Cancel',
         delete: 'Delete',
         notFound: 'Not found',
@@ -27,6 +28,7 @@ export const translations = {
         page: 'page',
         of: 'of',
         showing: 'Showing',
+        refresh: 'Refresh',
       },
       // Search Hero & Search page
       search: {
@@ -197,6 +199,28 @@ export const translations = {
         apiKeyLabel: 'API Key',
         apiKeyPlaceholder: 'Enter your API key',
       },
+      // Profile
+      profile: {
+        editTitle: 'Edit Profile',
+        displayName: 'Display Name',
+        save: 'Save Changes',
+        saved: 'Profile updated',
+        saveFailed: 'Failed to update profile',
+      },
+      // Activity Monitor
+      activity: {
+        title: 'Activity Monitor',
+        subtitle: 'Real-time user activity · last 24 hours',
+        perfumeViews: 'Perfume Views',
+        brandSearches: 'Brand Searches',
+        uniqueSessions: 'Sessions',
+        uniqueUsers: 'Logged-in Users',
+        last24h: 'Last 24 hours',
+        topPerfumes: 'Most Viewed (7 days)',
+        topBrands: 'Most Searched (7 days)',
+        recentEvents: 'Recent Events',
+        noData: 'No data yet',
+      },
     },
   },
   es: {
@@ -215,8 +239,9 @@ export const translations = {
         search: 'Buscar',
         back: 'Volver',
         loading: 'Cargando...',
-        error: 'Error',
+        error: 'Algo salió mal',
         save: 'Guardar',
+        saving: 'Guardando...',
         cancel: 'Cancelar',
         delete: 'Eliminar',
         notFound: 'No encontrado',
@@ -227,6 +252,7 @@ export const translations = {
         page: 'página',
         of: 'de',
         showing: 'Mostrando',
+        refresh: 'Actualizar',
       },
       // Search Hero & Search page
       search: {
@@ -396,6 +422,28 @@ export const translations = {
         logout: 'Cerrar Sesión',
         apiKeyLabel: 'API Key',
         apiKeyPlaceholder: 'Ingresa tu API key',
+      },
+      // Profile
+      profile: {
+        editTitle: 'Editar Perfil',
+        displayName: 'Nombre de pantalla',
+        save: 'Guardar cambios',
+        saved: 'Perfil actualizado',
+        saveFailed: 'Error al actualizar el perfil',
+      },
+      // Activity Monitor
+      activity: {
+        title: 'Monitor de Actividad',
+        subtitle: 'Actividad en tiempo real · últimas 24 horas',
+        perfumeViews: 'Vistas de Perfumes',
+        brandSearches: 'Búsquedas de Marcas',
+        uniqueSessions: 'Sesiones',
+        uniqueUsers: 'Usuarios Activos',
+        last24h: 'Últimas 24 horas',
+        topPerfumes: 'Más Vistos (7 días)',
+        topBrands: 'Más Buscados (7 días)',
+        recentEvents: 'Eventos Recientes',
+        noData: 'Sin datos aún',
       },
     },
   },

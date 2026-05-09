@@ -19,18 +19,18 @@ import { API_BASE_URL } from '@/lib/api';
 export default function Login() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { login, loginWithGoogle, isLoading, isSuperAdmin } = useAuth();
+    const { login, loginWithGoogle, isLoading, isSuperAdmin, user } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
-    // If already authenticated as superadmin, redirect
+    // Redirect authenticated users to their appropriate page
     useEffect(() => {
-        if (!isLoading && isSuperAdmin) {
-            navigate('/admin');
+        if (!isLoading && user) {
+            navigate(isSuperAdmin ? '/admin' : '/profile');
         }
-    }, [isLoading, isSuperAdmin, navigate]);
+    }, [isLoading, user, isSuperAdmin, navigate]);
 
     // Show OAuth error if redirected from callback with error
     useEffect(() => {
@@ -62,7 +62,7 @@ export default function Login() {
         setIsSubmitting(false);
         if (success) {
             toast.success('Logged in successfully.');
-            navigate('/admin');
+            navigate(isSuperAdmin ? '/admin' : '/profile');
         } else {
             toast.error('Invalid credentials.');
         }
