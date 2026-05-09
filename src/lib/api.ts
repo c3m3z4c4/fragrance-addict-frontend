@@ -1088,6 +1088,32 @@ export interface BrandsScrapeResult {
     autoStarted: boolean;
 }
 
+export interface BrandLogoResult {
+    name: string;
+    logoUrl: string | null;
+    status: 'updated' | 'not_found' | 'error';
+    error?: string;
+}
+
+export async function fetchBrandLogos(): Promise<{
+    success: boolean;
+    total: number;
+    updated: number;
+    failed: number;
+    results: BrandLogoResult[];
+    error?: string;
+}> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, total: 0, updated: 0, failed: 0, results: [], error: data.error };
+    }
+    return res.json();
+}
+
 export async function scrapeBrand(
     brand: string,
     options: { limit?: number; autoStart?: boolean } = {}

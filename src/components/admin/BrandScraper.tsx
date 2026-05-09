@@ -6,7 +6,9 @@ import {
     getQueueStatus,
     startQueue,
     stopQueue,
+    fetchBrandLogos,
     type BrandScrapeResult,
+    type BrandLogoResult,
     type QueueStatus,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -34,6 +36,7 @@ import {
     CheckCircle2,
     XCircle,
     AlertTriangle,
+    ImageIcon,
 } from 'lucide-react';
 
 interface BrandResult extends BrandScrapeResult {
@@ -52,6 +55,10 @@ export function BrandScraper() {
     // Processing state
     const [isRunning, setIsRunning] = useState(false);
     const [results, setResults] = useState<BrandResult[]>([]);
+
+    // Logo fetching state
+    const [isFetchingLogos, setIsFetchingLogos] = useState(false);
+    const [logoResults, setLogoResults] = useState<{ updated: number; failed: number; results: BrandLogoResult[] } | null>(null);
 
     // Queue status
     const { data: queueStatus } = useQuery<QueueStatus>({
@@ -80,6 +87,26 @@ export function BrandScraper() {
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); addBrand(); }
+    };
+
+    const handleFetchLogos = async () => {
+        setIsFetchingLogos(true);
+        setLogoResults(null);
+        toast.info('Fetching brand logos from Clearbit… this may take a few minutes.');
+        try {
+            const result = await fetchBrandLogos();
+            if (result.success) {
+                setLogoResults(result);
+                toast.success(`Logos updated: ${result.updated} found, ${result.failed} not found`);
+                queryClient.invalidateQueries({ queryKey: ['brands'] });
+            } else {
+                toast.error(result.error ?? 'Failed to fetch logos');
+            }
+        } catch {
+            toast.error('Failed to fetch logos');
+        } finally {
+            setIsFetchingLogos(false);
+        }
     };
 
     const handleScrape = async () => {
@@ -337,6 +364,66 @@ export function BrandScraper() {
                                     {e.url}: {e.error}
                                 </p>
                             ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Brand Logos via Clearbit */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5" /> Brand Logos
+                    </CardTitle>
+                    <CardDescription>
+                        Fetch official brand logos from Clearbit for all brands in the catalog. Replaces bottle photos with proper logos.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Button
+                        onClick={handleFetchLogos}
+                        disabled={isFetchingLogos}
+                        className="w-full sm:w-auto"
+                    >
+                        {isFetchingLogos ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Fetching logos…</>
+                        ) : (
+                            <><ImageIcon className="h-4 w-4 mr-2" /> Fetch All Brand Logos</>
+                        )}
+                    </Button>
+
+                    {isFetchingLogos && (
+                        <p className="text-xs text-muted-foreground animate-pulse">
+                            Querying Clearbit for each brand… ~120ms per brand, may take a few minutes for large catalogs.
+                        </p>
+                    )}
+
+                    {logoResults && (
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3 text-center">
+                                <div className="border rounded-sm p-3">
+                                    <p className="text-2xl font-bold text-green-600">{logoResults.updated}</p>
+                                    <p className="text-xs text-muted-foreground">Logos found</p>
+                                </div>
+                                <div className="border rounded-sm p-3">
+                                    <p className="text-2xl font-bold text-muted-foreground">{logoResults.failed}</p>
+                                    <p className="text-xs text-muted-foreground">Not found</p>
+                                </div>
+                            </div>
+
+                            {/* Logo preview grid */}
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-64 overflow-y-auto">
+                                {logoResults.results
+                                    .filter(r => r.logoUrl)
+                                    .map(r => (
+                                        <div key={r.name} className="border rounded-sm p-2 bg-white flex flex-col items-center gap-1">
+                                            <img src={r.logoUrl!} alt={r.name}
+                                                className="h-10 w-full object-contain"
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                            <p className="text-[9px] text-center text-muted-foreground truncate w-full">{r.name}</p>
+                                        </div>
+                                    ))}
+                            </div>
                         </div>
                     )}
                 </CardContent>
