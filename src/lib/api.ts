@@ -993,6 +993,52 @@ export async function updateUserRole(userId: string, role: 'SUPERADMIN' | 'USER'
     return response.ok;
 }
 
+export async function adminUpdateUser(
+    userId: string,
+    fields: { email?: string; newPassword?: string }
+): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(fields),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, error: data.error || 'Update failed' };
+    }
+    return { success: true };
+}
+
+export async function updateMyEmail(email: string): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, error: data.error || 'Email update failed' };
+    }
+    const data = await res.json();
+    return { success: true, ...data };
+}
+
+export async function updateMyPassword(
+    currentPassword: string,
+    newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/me/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, error: data.error || 'Password update failed' };
+    }
+    return { success: true };
+}
+
 // ============= BRAND SCRAPING =============
 
 export interface BrandScrapeResult {

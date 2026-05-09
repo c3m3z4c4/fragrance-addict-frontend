@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = doLogout;
 
-    const updateProfile = async (fields: { name?: string; avatarUrl?: string }): Promise<boolean> => {
+    const updateProfile = async (fields: { name?: string; avatarUrl?: string; email?: string }): Promise<boolean> => {
         const token = getAuthToken();
         if (!token || !user) return false;
         try {
