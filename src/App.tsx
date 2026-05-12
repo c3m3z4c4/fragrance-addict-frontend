@@ -21,6 +21,7 @@ import AIRecommendations from './pages/AIRecommendations';
 import Profile from './pages/Profile';
 import ActivityMonitor from './pages/ActivityMonitor';
 import NotFound from './pages/NotFound';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -122,6 +123,7 @@ const App = () => (
                 <Sonner />
                 <BrowserRouter>
                     <AppRoutes />
+                    <PWAInstallPrompt />
                 </BrowserRouter>
             </AuthProvider>
         </TooltipProvider>
