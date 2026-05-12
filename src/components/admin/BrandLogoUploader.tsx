@@ -408,26 +408,29 @@ function BrandPicker({ value, brands, onChange }: {
 function SingleUpload({ brands }: { brands: BrandInfo[] }) {
     const queryClient = useQueryClient();
     const [query, setQuery] = useState('');
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selected, setSelected] = useState<BrandInfo | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filtered = query.length > 0
-        ? brands.filter(b => b.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+        ? brands.filter(b => b.name.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
         : [];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
         if (!f) return;
         setFile(f);
+        if (preview) URL.revokeObjectURL(preview);
         setPreview(URL.createObjectURL(f));
     };
 
     const handleSelect = (brand: BrandInfo) => {
         setSelected(brand);
         setQuery(brand.name);
+        setDropdownOpen(false);
     };
 
     const handleUpload = async () => {
@@ -438,23 +441,28 @@ function SingleUpload({ brands }: { brands: BrandInfo[] }) {
             if (res.success) {
                 toast.success(`Logo actualizado para ${selected.name}`);
                 queryClient.invalidateQueries({ queryKey: ['brands'] });
-                setSelected(null); setQuery(''); setFile(null); setPreview(null);
-                if (inputRef.current) inputRef.current.value = '';
+                setSelected(null); setQuery(''); setFile(null);
+                if (preview) { URL.revokeObjectURL(preview); setPreview(null); }
+                if (fileInputRef.current) fileInputRef.current.value = '';
             } else {
                 toast.error(res.error || 'Error al subir logo');
             }
+        } catch (err: any) {
+            toast.error(err?.message || 'Error inesperado al subir el logo');
         } finally {
             setUploading(false);
         }
     };
 
     const clear = () => {
-        setSelected(null); setQuery(''); setFile(null); setPreview(null);
-        if (inputRef.current) inputRef.current.value = '';
+        setSelected(null); setQuery(''); setFile(null); setDropdownOpen(false);
+        if (preview) { URL.revokeObjectURL(preview); setPreview(null); }
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     return (
         <div className="space-y-5">
+            {/* Brand search */}
             <div className="space-y-1.5">
                 <Label>Marca</Label>
                 <div className="relative max-w-sm">
@@ -463,65 +471,97 @@ function SingleUpload({ brands }: { brands: BrandInfo[] }) {
                         className="pl-9 pr-9"
                         placeholder="Buscar marca…"
                         value={query}
-                        onChange={e => { setQuery(e.target.value); setSelected(null); }}
+                        autoComplete="off"
+                        onChange={e => { setQuery(e.target.value); setSelected(null); setDropdownOpen(true); }}
+                        onFocus={() => { if (query) setDropdownOpen(true); }}
+                        onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
                     />
                     {query && (
                         <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                             <X className="h-4 w-4" />
                         </button>
                     )}
+
+                    {/* Dropdown */}
+                    {dropdownOpen && filtered.length > 0 && !selected && (
+                        <div className="absolute z-50 top-full mt-1 left-0 right-0 rounded-md border bg-popover shadow-lg max-h-60 overflow-y-auto">
+                            {filtered.map(b => (
+                                <button key={b.name}
+                                    className="flex items-center gap-3 w-full px-3 py-2 text-sm hover:bg-accent text-left"
+                                    onMouseDown={e => { e.preventDefault(); handleSelect(b); }}
+                                >
+                                    {b.imageUrl
+                                        ? <img src={b.imageUrl} alt={b.name} className="h-6 w-10 object-contain flex-shrink-0 bg-white rounded border" />
+                                        : <div className="h-6 w-10 flex-shrink-0 bg-muted rounded border flex items-center justify-center">
+                                            <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                                          </div>
+                                    }
+                                    <span className="flex-1 truncate">{b.name}</span>
+                                    {!b.imageUrl && <span className="text-[10px] text-amber-500 flex-shrink-0">sin logo</span>}
+                                    <span className="text-xs text-muted-foreground flex-shrink-0">{b.count}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                {filtered.length > 0 && !selected && (
-                    <div className="max-w-sm rounded-md border bg-popover shadow-md">
-                        {filtered.map(b => (
-                            <button key={b.name}
-                                className="flex items-center gap-3 w-full px-3 py-2 text-sm hover:bg-accent text-left"
-                                onClick={() => handleSelect(b)}
-                            >
-                                {b.imageUrl
-                                    ? <img src={b.imageUrl} alt={b.name} className="h-6 w-10 object-contain flex-shrink-0 bg-white rounded" />
-                                    : <div className="h-6 w-10 flex-shrink-0 bg-muted rounded flex items-center justify-center">
-                                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                                      </div>
-                                }
-                                <span className="flex-1 truncate">{b.name}</span>
-                                <span className="text-xs text-muted-foreground">{b.count}</span>
-                            </button>
-                        ))}
-                    </div>
-                )}
+
                 {selected && (
-                    <Badge variant="secondary" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-600" /> {selected.name}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="gap-1.5">
+                            <CheckCircle2 className="h-3 w-3 text-green-600" /> {selected.name}
+                        </Badge>
+                        {selected.imageUrl && (
+                            <span className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" /> Ya tiene logo — se sobreescribirá
+                            </span>
+                        )}
+                    </div>
                 )}
             </div>
 
+            {/* File picker */}
             <div className="space-y-1.5">
                 <Label>Imagen del logo</Label>
-                <Input ref={inputRef} type="file"
+                <input
+                    ref={fileInputRef}
+                    type="file"
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    onChange={handleFileChange} className="max-w-sm cursor-pointer" />
+                    onChange={handleFileChange}
+                    className="block max-w-sm text-sm text-muted-foreground cursor-pointer
+                        file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
+                        file:text-sm file:font-medium file:bg-primary file:text-primary-foreground
+                        file:cursor-pointer hover:file:opacity-90"
+                />
                 <p className="text-xs text-muted-foreground">PNG, JPG, WEBP o SVG — máx. 5 MB</p>
             </div>
 
+            {/* Preview */}
             {preview && (
                 <div className="flex items-center gap-4">
-                    <div className="border rounded-lg p-3 bg-white w-32 h-20 flex items-center justify-center">
+                    <div className="border rounded-lg p-3 bg-white w-32 h-20 flex items-center justify-center flex-shrink-0">
                         <img src={preview} alt="preview" className="max-h-full max-w-full object-contain" />
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground">{file?.name}</p>
-                        <p>{file ? `${(file.size / 1024).toFixed(1)} KB` : ''}</p>
+                    <div className="text-sm">
+                        <p className="font-medium">{file?.name}</p>
+                        <p className="text-muted-foreground">{file ? `${(file.size / 1024).toFixed(1)} KB` : ''}</p>
                     </div>
                 </div>
             )}
 
-            <Button onClick={handleUpload} disabled={!selected || !file || uploading}>
+            {/* Upload button */}
+            <Button onClick={handleUpload} disabled={!selected || !file || uploading} size="lg">
                 {uploading
                     ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Subiendo…</>
-                    : <><Upload className="h-4 w-4 mr-2" /> Subir logo</>}
+                    : <><Upload className="h-4 w-4 mr-2" /> Subir logo{selected ? ` para ${selected.name}` : ''}</>}
             </Button>
+
+            {(!selected || !file) && (
+                <p className="text-xs text-muted-foreground">
+                    {!selected && !file ? 'Selecciona una marca y una imagen para continuar'
+                        : !selected ? 'Busca y selecciona una marca'
+                        : 'Elige una imagen para el logo'}
+                </p>
+            )}
         </div>
     );
 }

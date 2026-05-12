@@ -1320,19 +1320,23 @@ export async function uploadBrandLogo(brandName: string, file: File): Promise<{
     logoUrl?: string;
     error?: string;
 }> {
-    const form = new FormData();
-    form.append('brandName', brandName);
-    form.append('file', file);
-    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logo/upload`, {
-        method: 'POST',
-        headers: { ...getAuthHeader() },
-        body: form,
-    });
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        return { success: false, error: data.error || 'Upload failed' };
+    try {
+        const form = new FormData();
+        form.append('brandName', brandName);
+        form.append('file', file);
+        const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logo/upload`, {
+            method: 'POST',
+            headers: { ...getAuthHeader() },
+            body: form,
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}: ${res.statusText}` };
+        }
+        return res.json();
+    } catch (err: any) {
+        return { success: false, error: err?.message || 'No se pudo conectar con el servidor' };
     }
-    return res.json();
 }
 
 export interface BulkLogoUploadResult {
@@ -1357,14 +1361,18 @@ export async function uploadBrandLogosBulk(
     const form = new FormData();
     files.forEach(f => form.append('files', f));
     if (mapping) form.append('mapping', JSON.stringify(mapping));
-    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos/bulk-upload`, {
-        method: 'POST',
-        headers: { ...getAuthHeader() },
-        body: form,
-    });
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        return { success: false, total: 0, updated: 0, failed: 0, results: [], error: data.error || 'Bulk upload failed' };
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos/bulk-upload`, {
+            method: 'POST',
+            headers: { ...getAuthHeader() },
+            body: form,
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, total: 0, updated: 0, failed: 0, results: [], error: data.error || `Error ${res.status}: ${res.statusText}` };
+        }
+        return res.json();
+    } catch (err: any) {
+        return { success: false, total: 0, updated: 0, failed: 0, results: [], error: err?.message || 'No se pudo conectar con el servidor' };
     }
-    return res.json();
 }
