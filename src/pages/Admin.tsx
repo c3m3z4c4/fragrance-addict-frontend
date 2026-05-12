@@ -10,6 +10,7 @@ import { AdminStats } from '@/components/admin/AdminStats';
 import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { BrandScraper } from '@/components/admin/BrandScraper';
+import { BrandLogoUploader } from '@/components/admin/BrandLogoUploader';
 import { ResetPanel } from '@/components/admin/ResetPanel';
 import { AboutEditor } from '@/components/admin/AboutEditor';
 import { AISettings } from '@/components/admin/AISettings';
@@ -179,7 +180,8 @@ export default function Admin() {
             <UserManagement />
           </TabsContent>
 
-          <TabsContent value="brands" className="animate-fade-in">
+          <TabsContent value="brands" className="animate-fade-in space-y-8">
+            <BrandLogoUploader />
             <BrandScraper />
           </TabsContent>
 

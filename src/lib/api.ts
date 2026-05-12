@@ -1311,3 +1311,60 @@ export async function fetchAIRecommendations(
         return { recommendations: [], basedOnFavorites: 0, error: 'Network error' };
     }
 }
+
+// ─── Brand logo upload ────────────────────────────────────────────────────────
+
+export async function uploadBrandLogo(brandName: string, file: File): Promise<{
+    success: boolean;
+    brand?: string;
+    logoUrl?: string;
+    error?: string;
+}> {
+    const form = new FormData();
+    form.append('brandName', brandName);
+    form.append('file', file);
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logo/upload`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: form,
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, error: data.error || 'Upload failed' };
+    }
+    return res.json();
+}
+
+export interface BulkLogoUploadResult {
+    filename: string;
+    brand: string;
+    logoUrl?: string;
+    success: boolean;
+    error?: string;
+}
+
+export async function uploadBrandLogosBulk(
+    files: File[],
+    mapping?: { filename: string; brandName: string }[]
+): Promise<{
+    success: boolean;
+    total: number;
+    updated: number;
+    failed: number;
+    results: BulkLogoUploadResult[];
+    error?: string;
+}> {
+    const form = new FormData();
+    files.forEach(f => form.append('files', f));
+    if (mapping) form.append('mapping', JSON.stringify(mapping));
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos/bulk-upload`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: form,
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, total: 0, updated: 0, failed: 0, results: [], error: data.error || 'Bulk upload failed' };
+    }
+    return res.json();
+}

@@ -80,6 +80,14 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: /^https:\/\/api\.fragranceaddict\.c3m3z4\.dev\/uploads\/.*/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "uploaded-logos",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
             urlPattern: /^https:\/\/api\.fragranceaddict\.c3m3z4\.dev\/.*/,
             handler: "NetworkFirst",
             options: {
