@@ -25,6 +25,15 @@ function getInitials(name: string): string {
     .join('');
 }
 
+function brandToKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_');
+}
+
 interface BrandCardProps {
   name: string;
   count: number;
@@ -34,8 +43,21 @@ interface BrandCardProps {
 
 function BrandCard({ name, count, imageUrl, index }: BrandCardProps) {
   const { t } = useTranslation();
+  const localLogo = `/logos/${brandToKey(name)}.png`;
+  const [triedLocal, setTriedLocal] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const showLogo = imageUrl && !imgError;
+
+  const currentSrc = imageUrl && !triedLocal ? imageUrl : localLogo;
+
+  const handleError = () => {
+    if (!triedLocal && imageUrl) {
+      setTriedLocal(true);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  const showLogo = !imgError;
   const hue = brandHue(name);
   const initials = getInitials(name);
 
@@ -61,10 +83,10 @@ function BrandCard({ name, count, imageUrl, index }: BrandCardProps) {
       >
         {showLogo ? (
           <img
-            src={imageUrl}
+            src={currentSrc}
             alt={name}
             className="max-h-full max-w-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
-            onError={() => setImgError(true)}
+            onError={handleError}
           />
         ) : (
           <span
