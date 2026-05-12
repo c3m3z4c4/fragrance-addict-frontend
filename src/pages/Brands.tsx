@@ -85,7 +85,7 @@ function BrandCard({ name, count, imageUrl, index }: BrandCardProps) {
           <img
             src={currentSrc}
             alt={name}
-            className="max-h-full max-w-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
             onError={handleError}
           />
         ) : (
