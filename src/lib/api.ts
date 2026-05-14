@@ -1376,3 +1376,28 @@ export async function uploadBrandLogosBulk(
         return { success: false, total: 0, updated: 0, failed: 0, results: [], error: err?.message || 'No se pudo conectar con el servidor' };
     }
 }
+
+// ============= DATABASE BACKUP / RESTORE =============
+
+export async function exportBackup(brand?: string): Promise<void> {
+    const url = brand
+        ? `${API_BASE_URL}/api/backup/export?brand=${encodeURIComponent(brand)}`
+        : `${API_BASE_URL}/api/backup/export`;
+    const res = await fetch(url, { headers: { ...getAuthHeader() } });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fragrance-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+}
+
+export async function importBackup(data: object): Promise<{ imported: number }> {
+    const res = await fetch(`${API_BASE_URL}/api/backup/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Import failed');
+    return res.json();
+}

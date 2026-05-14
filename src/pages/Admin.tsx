@@ -15,8 +15,9 @@ import { ResetPanel } from '@/components/admin/ResetPanel';
 import { AboutEditor } from '@/components/admin/AboutEditor';
 import { AISettings } from '@/components/admin/AISettings';
 import { DuplicateManager } from '@/components/admin/DuplicateManager';
+import { DatabaseBackup } from '@/components/admin/DatabaseBackup';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -101,7 +102,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-5xl grid-cols-12">
+          <TabsList className="flex flex-wrap w-full max-w-5xl h-auto gap-1 justify-start">
             <TabsTrigger value="perfumes" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Perfumes</span>
@@ -145,6 +146,10 @@ export default function Admin() {
             <TabsTrigger value="ai" className="flex items-center gap-2">
               <Bot className="h-4 w-4" />
               <span className="hidden sm:inline">AI</span>
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              <span className="hidden sm:inline">Backup</span>
             </TabsTrigger>
             <TabsTrigger value="reset" className="flex items-center gap-2 text-destructive data-[state=active]:text-destructive">
               <Trash2 className="h-4 w-4" />
@@ -195,6 +200,10 @@ export default function Admin() {
 
           <TabsContent value="ai" className="animate-fade-in">
             <AISettings />
+          </TabsContent>
+
+          <TabsContent value="backup" className="animate-fade-in">
+            <DatabaseBackup />
           </TabsContent>
 
           <TabsContent value="reset" className="animate-fade-in">
