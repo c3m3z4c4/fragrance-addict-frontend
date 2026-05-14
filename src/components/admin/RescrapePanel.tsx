@@ -13,6 +13,7 @@ import {
   rescrapePerfumes,
   rescrapeBrand,
   addIncompleteToQueue,
+  addIdsToQueue,
   getQueueStatus,
   startQueue,
   stopQueue,
@@ -59,10 +60,16 @@ function ByPerfumeTab() {
   });
 
   const addToQueueMutation = useMutation({
-    mutationFn: (ids: string[]) => rescrapePerfumes(ids), // re-uses direct for small sets
-    onSuccess: () => {
-      toast({ title: 'En proceso', description: 'Re-scrape de seleccionados iniciado' });
-      setSelectedIds([]);
+    mutationFn: (ids: string[]) => addIdsToQueue(ids),
+    onSuccess: (res) => {
+      toast({
+        title: res.success ? 'Agregado a cola' : 'Error',
+        description: res.success
+          ? `${res.added} perfumes en cola (total: ${res.queueSize})`
+          : res.error,
+        variant: res.success ? 'default' : 'destructive',
+      });
+      if (res.success) setSelectedIds([]);
     },
     onError: (err) => toast({ title: 'Error', description: String(err), variant: 'destructive' }),
   });
@@ -112,24 +119,23 @@ function ByPerfumeTab() {
           size="sm"
           onClick={() => {
             if (selectedIds.length > 100) {
-              toast({ title: 'Máximo 100 para re-scrape directo', description: 'Usa "Agregar a cola" para más.', variant: 'destructive' });
-              return;
+              // Auto-route to queue for large selections
+              addToQueueMutation.mutate(selectedIds);
+            } else {
+              rescrapeMutation.mutate(selectedIds);
             }
-            rescrapeMutation.mutate(selectedIds);
           }}
-          disabled={selectedIds.length === 0 || rescrapeMutation.isPending}
+          disabled={selectedIds.length === 0 || rescrapeMutation.isPending || addToQueueMutation.isPending}
+          title={selectedIds.length > 100 ? 'Más de 100 seleccionados — se agregará a la cola automáticamente' : undefined}
         >
-          <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', rescrapeMutation.isPending && 'animate-spin')} />
-          Re-scrapear ({selectedIds.length})
+          <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', (rescrapeMutation.isPending || addToQueueMutation.isPending) && 'animate-spin')} />
+          {selectedIds.length > 100 ? `A cola (${selectedIds.length})` : `Re-scrapear (${selectedIds.length})`}
         </Button>
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            // Add selected to queue via addIncompleteToQueue equivalent
-            toast({ title: 'Funcionalidad', description: 'Usa la pestaña "Por Lote" para gestionar la cola' });
-          }}
-          disabled={selectedIds.length === 0}
+          onClick={() => addToQueueMutation.mutate(selectedIds)}
+          disabled={selectedIds.length === 0 || addToQueueMutation.isPending}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Agregar a cola

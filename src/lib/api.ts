@@ -843,6 +843,31 @@ export async function addIncompleteToQueue(limit = 50): Promise<{
     return response.json();
 }
 
+// Add specific perfume IDs to the scraping queue for re-scraping
+export async function addIdsToQueue(ids: string[]): Promise<{
+    success: boolean;
+    added?: number;
+    queueSize?: number;
+    total?: number;
+    message?: string;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/scrape/rescrape/queue/ids`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ ids }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return { success: false, error: err.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
 // Get incomplete perfumes grouped by brand
 export interface IncompleteBrand {
     brand: string;
