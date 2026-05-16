@@ -46,8 +46,9 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
                     ? 'bg-background/96 backdrop-blur-md border-b border-border shadow-sm'
                     : 'bg-background/75 backdrop-blur-sm border-b border-transparent'
             )}
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
         >
-            <div className="container mx-auto px-4">
+            <div className="container mx-auto px-4" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
                 <div className="flex items-center justify-between h-16 md:h-[72px]">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2.5 group">

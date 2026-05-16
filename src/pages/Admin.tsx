@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdminPerfumeList } from '@/components/admin/AdminPerfumeList';
@@ -102,60 +103,40 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex flex-wrap w-full max-w-5xl h-auto gap-1 justify-start">
-            <TabsTrigger value="perfumes" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              <span className="hidden sm:inline">Perfumes</span>
-            </TabsTrigger>
-            <TabsTrigger value="scraper" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Scraper</span>
-            </TabsTrigger>
-            <TabsTrigger value="import" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Import</span>
-            </TabsTrigger>
-            <TabsTrigger value="rescrape" className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline">Re-Scrape</span>
-            </TabsTrigger>
-            <TabsTrigger value="metrics" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              <span className="hidden sm:inline">Metrics</span>
-            </TabsTrigger>
-            <TabsTrigger value="stats" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Stats</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="brands" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline">Brands</span>
-            </TabsTrigger>
-            <TabsTrigger value="duplicates" className="flex items-center gap-2">
-              <Copy className="h-4 w-4" />
-              <span className="hidden sm:inline">Dupes</span>
-            </TabsTrigger>
-            <TabsTrigger value="about" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">About</span>
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              <span className="hidden sm:inline">AI</span>
-            </TabsTrigger>
-            <TabsTrigger value="backup" className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4" />
-              <span className="hidden sm:inline">Backup</span>
-            </TabsTrigger>
-            <TabsTrigger value="reset" className="flex items-center gap-2 text-destructive data-[state=active]:text-destructive">
-              <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Reset</span>
-            </TabsTrigger>
-          </TabsList>
+          {/* Scrollable single-row tab bar — works on all screen sizes */}
+          <div className="relative">
+            <TabsList className="flex w-max min-w-full h-auto gap-0.5 overflow-x-auto scrollbar-hide rounded-lg p-1">
+              {([
+                { value: 'perfumes',   icon: <Database className="h-3.5 w-3.5" />,   label: 'Perfumes' },
+                { value: 'scraper',    icon: <Sparkles className="h-3.5 w-3.5" />,   label: 'Scraper' },
+                { value: 'import',     icon: <Globe className="h-3.5 w-3.5" />,      label: 'Import' },
+                { value: 'rescrape',   icon: <RefreshCw className="h-3.5 w-3.5" />,  label: 'Re-Scrape' },
+                { value: 'metrics',    icon: <Activity className="h-3.5 w-3.5" />,   label: 'Metrics' },
+                { value: 'stats',      icon: <BarChart3 className="h-3.5 w-3.5" />,  label: 'Stats' },
+                { value: 'users',      icon: <Users className="h-3.5 w-3.5" />,      label: 'Users' },
+                { value: 'brands',     icon: <Layers className="h-3.5 w-3.5" />,     label: 'Brands' },
+                { value: 'duplicates', icon: <Copy className="h-3.5 w-3.5" />,       label: 'Dupes' },
+                { value: 'about',      icon: <FileText className="h-3.5 w-3.5" />,   label: 'About' },
+                { value: 'ai',         icon: <Bot className="h-3.5 w-3.5" />,        label: 'AI' },
+                { value: 'backup',     icon: <HardDrive className="h-3.5 w-3.5" />,  label: 'Backup' },
+                { value: 'reset',      icon: <Trash2 className="h-3.5 w-3.5 text-destructive" />, label: 'Reset', destructive: true },
+              ] as const).map(({ value, icon, label, destructive }: any) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap shrink-0 rounded-md',
+                    destructive && 'text-destructive data-[state=active]:text-destructive'
+                  )}
+                >
+                  {icon}
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {/* Fade hint on right edge to signal scroll */}
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-muted to-transparent rounded-r-lg" />
+          </div>
 
           <TabsContent value="perfumes" className="animate-fade-in">
             <AdminPerfumeList />
