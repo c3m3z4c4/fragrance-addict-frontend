@@ -1,195 +1,933 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, Database, FileJson, AlertTriangle } from 'lucide-react';
-import { exportBackup, importBackup } from '@/lib/api';
+import {
+    Download,
+    Upload,
+    Database,
+    FileJson,
+    Cloud,
+    Clock,
+    HardDrive,
+    Trash2,
+    RefreshCw,
+    Plus,
+    CheckCircle,
+    XCircle,
+    ChevronDown,
+    ChevronUp,
+    Wifi,
+    WifiOff,
+    Calendar,
+    Save,
+    RotateCcw,
+} from 'lucide-react';
+import {
+    getBackupConfig,
+    saveBackupConfig,
+    createBackupNow,
+    listLocalBackups,
+    restoreFromBackupFile,
+    deleteLocalBackup,
+    testBackupDestination,
+    exportBackup,
+    type BackupConfig,
+    type BackupDestination,
+    type LocalBackup,
+} from '@/lib/api';
 
-export function DatabaseBackup() {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatBytes(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatDate(iso: string) {
+    return new Date(iso).toLocaleString('es-MX', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+function newDestId() {
+    return `dest-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+const DEST_TYPES = [
+    { value: 'webdav', label: 'WebDAV' },
+    { value: 'sftp', label: 'SFTP' },
+    { value: 'gdrive', label: 'Google Drive' },
+] as const;
+
+const SCHEDULE_TYPES = [
+    { value: 'daily', label: 'Diario' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensual' },
+] as const;
+
+const WEEKDAYS = [
+    { value: 0, label: 'Domingo' },
+    { value: 1, label: 'Lunes' },
+    { value: 2, label: 'Martes' },
+    { value: 3, label: 'Miércoles' },
+    { value: 4, label: 'Jueves' },
+    { value: 5, label: 'Viernes' },
+    { value: 6, label: 'Sábado' },
+];
+
+// ─── DestinationForm ──────────────────────────────────────────────────────────
+
+interface DestFormProps {
+    dest: BackupDestination;
+    onChange: (d: BackupDestination) => void;
+    onDelete: () => void;
+    onTest: (dest: BackupDestination) => void;
+    testing: boolean;
+    testResult: { success: boolean; message?: string } | null;
+}
+
+function DestinationForm({ dest, onChange, onDelete, onTest, testing, testResult }: DestFormProps) {
+    const [expanded, setExpanded] = useState(false);
+
+    function set(field: string, value: string | boolean) {
+        if (field === 'name' || field === 'type' || field === 'enabled') {
+            onChange({ ...dest, [field]: value } as any);
+        } else {
+            onChange({ ...dest, config: { ...dest.config, [field]: value as string } });
+        }
+    }
+
+    return (
+        <div className="border border-border rounded-lg overflow-hidden">
+            {/* Header row */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/30">
+                {/* Enable toggle */}
+                <button
+                    type="button"
+                    onClick={() => set('enabled', !dest.enabled)}
+                    className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${dest.enabled ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
+                    title={dest.enabled ? 'Deshabilitar' : 'Habilitar'}
+                >
+                    <span
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${dest.enabled ? 'left-4' : 'left-0.5'}`}
+                    />
+                </button>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">{dest.name || 'Sin nombre'}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono uppercase">
+                            {dest.type}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => onTest(dest)}
+                        disabled={testing}
+                        title="Probar conexión"
+                    >
+                        {testing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Wifi className="h-3 w-3" />}
+                        Probar
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={onDelete}
+                        title="Eliminar destino"
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setExpanded(e => !e)}
+                        title={expanded ? 'Colapsar' : 'Expandir'}
+                    >
+                        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                </div>
+            </div>
+
+            {/* Test result banner */}
+            {testResult && (
+                <div className={`px-4 py-2 text-xs flex items-center gap-2 ${testResult.success ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'}`}>
+                    {testResult.success ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                    {testResult.message || (testResult.success ? 'Conexión exitosa' : 'Error de conexión')}
+                </div>
+            )}
+
+            {/* Expanded config form */}
+            {expanded && (
+                <div className="p-4 space-y-4 border-t border-border bg-background">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <Label>Nombre del destino</Label>
+                            <Input
+                                value={dest.name}
+                                onChange={e => set('name', e.target.value)}
+                                placeholder="Mi NAS"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label>Tipo</Label>
+                            <select
+                                value={dest.type}
+                                onChange={e => set('type', e.target.value)}
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            >
+                                {DEST_TYPES.map(t => (
+                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* WebDAV fields */}
+                    {dest.type === 'webdav' && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                                Compatible con Asustor NAS (WebDAV en ADM), Nextcloud, ownCloud
+                            </p>
+                            <div className="space-y-1.5">
+                                <Label>URL del servidor WebDAV</Label>
+                                <Input
+                                    value={dest.config.url || ''}
+                                    onChange={e => set('url', e.target.value)}
+                                    placeholder="http://192.168.1.100:5005/webdav"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label>Usuario</Label>
+                                    <Input
+                                        value={dest.config.username || ''}
+                                        onChange={e => set('username', e.target.value)}
+                                        placeholder="admin"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label>Contraseña</Label>
+                                    <Input
+                                        type="password"
+                                        value={dest.config.password || ''}
+                                        onChange={e => set('password', e.target.value)}
+                                        placeholder="••••••••"
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Ruta remota</Label>
+                                <Input
+                                    value={dest.config.remotePath || '/'}
+                                    onChange={e => set('remotePath', e.target.value)}
+                                    placeholder="/backups/fragrance"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SFTP fields */}
+                    {dest.type === 'sftp' && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                                Compatible con Asustor NAS vía SFTP (SSH habilitado en ADM)
+                            </p>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="col-span-2 space-y-1.5">
+                                    <Label>Host / IP</Label>
+                                    <Input
+                                        value={dest.config.host || ''}
+                                        onChange={e => set('host', e.target.value)}
+                                        placeholder="192.168.1.100"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label>Puerto</Label>
+                                    <Input
+                                        value={dest.config.port || '22'}
+                                        onChange={e => set('port', e.target.value)}
+                                        placeholder="22"
+                                        type="number"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label>Usuario</Label>
+                                    <Input
+                                        value={dest.config.username || ''}
+                                        onChange={e => set('username', e.target.value)}
+                                        placeholder="admin"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label>Contraseña</Label>
+                                    <Input
+                                        type="password"
+                                        value={dest.config.password || ''}
+                                        onChange={e => set('password', e.target.value)}
+                                        placeholder="••••••••"
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Ruta remota</Label>
+                                <Input
+                                    value={dest.config.remotePath || '/backups'}
+                                    onChange={e => set('remotePath', e.target.value)}
+                                    placeholder="/volume1/backups/fragrance"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Google Drive fields */}
+                    {dest.type === 'gdrive' && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                                Crea una cuenta de servicio en Google Cloud Console, descarga el JSON
+                                y pégalo aquí. Comparte la carpeta de Drive con el email de la cuenta de servicio.
+                            </p>
+                            <div className="space-y-1.5">
+                                <Label>Service Account JSON</Label>
+                                <textarea
+                                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono resize-y"
+                                    value={dest.config.credentials || ''}
+                                    onChange={e => set('credentials', e.target.value)}
+                                    placeholder={'{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Folder ID de Google Drive</Label>
+                                <Input
+                                    value={dest.config.folderId || ''}
+                                    onChange={e => set('folderId', e.target.value)}
+                                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    ID de la carpeta en la URL de Drive. Dejar vacío usa "Mis archivos".
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Tab: Respaldos ───────────────────────────────────────────────────────────
+
+interface BackupsTabProps {
+    backups: LocalBackup[];
+    lastBackupAt: string | null;
+    loading: boolean;
+    onRefresh: () => void;
+}
+
+function BackupsTab({ backups, lastBackupAt, loading, onRefresh }: BackupsTabProps) {
     const { toast } = useToast();
+    const [creating, setCreating] = useState(false);
+    const [createBrand, setCreateBrand] = useState('');
+    const [restoringFile, setRestoringFile] = useState<string | null>(null);
+    const [deletingFile, setDeletingFile] = useState<string | null>(null);
+    const [downloadingJson, setDownloadingJson] = useState(false);
 
-    // Export state
-    const [exportBrand, setExportBrand] = useState('');
-    const [exporting, setExporting] = useState(false);
-
-    // Import state
-    const [importMode, setImportMode] = useState<'upsert' | 'replace'>('upsert');
-    const [importing, setImporting] = useState(false);
-    const [importResult, setImportResult] = useState<{ imported: number } | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleExport = async () => {
-        setExporting(true);
+    const handleCreate = async () => {
+        setCreating(true);
         try {
-            await exportBackup(exportBrand.trim() || undefined);
+            const res = await createBackupNow(createBrand.trim() || undefined);
+            if (!res.success) throw new Error(res.error);
+
+            const uploadSummary = res.uploads?.length
+                ? ` | ${res.uploads.filter(u => u.success).length}/${res.uploads.length} destinos subidos`
+                : '';
+
             toast({
-                title: 'Export successful',
-                description: exportBrand.trim()
-                    ? `Exported perfumes for brand "${exportBrand.trim()}"`
-                    : 'Exported all perfumes',
+                title: 'Respaldo creado',
+                description: `${res.filename} (${formatBytes(res.size || 0)})${uploadSummary}`,
             });
+            onRefresh();
         } catch (err: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Export failed',
-                description: err?.message || 'Unknown error',
-            });
+            toast({ variant: 'destructive', title: 'Error al crear respaldo', description: err.message });
         } finally {
-            setExporting(false);
+            setCreating(false);
         }
     };
 
-    const handleImport = async () => {
-        const file = fileInputRef.current?.files?.[0];
-        if (!file) {
-            toast({ variant: 'destructive', title: 'No file selected', description: 'Please choose a .json backup file' });
-            return;
-        }
-
-        setImporting(true);
-        setImportResult(null);
+    const handleDownloadJson = async () => {
+        setDownloadingJson(true);
         try {
-            const text = await file.text();
-            const parsed = JSON.parse(text);
+            await exportBackup(undefined);
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Error al descargar', description: err.message });
+        } finally {
+            setDownloadingJson(false);
+        }
+    };
 
-            // Accept both top-level array and { perfumes: [...] } format
-            const perfumes = Array.isArray(parsed)
-                ? parsed
-                : Array.isArray(parsed.perfumes)
-                ? parsed.perfumes
-                : null;
+    const handleRestore = async (filename: string) => {
+        if (!confirm(`¿Restaurar desde "${filename}"? Esto importará todos los perfumes del respaldo (upsert). Los datos existentes no se eliminarán.`)) return;
 
-            if (!perfumes) {
-                throw new Error('Invalid backup format: expected array or { perfumes: [...] }');
-            }
-
-            const result = await importBackup({ perfumes, mode: importMode });
-            setImportResult(result);
+        setRestoringFile(filename);
+        try {
+            const res = await restoreFromBackupFile(filename);
+            if (!res.success) throw new Error(res.error);
             toast({
-                title: 'Import successful',
-                description: `Imported ${result.imported} perfume(s) with mode "${importMode}"`,
+                title: 'Restauración completa',
+                description: `${res.imported} de ${res.total} perfumes importados.`,
             });
         } catch (err: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Import failed',
-                description: err?.message || 'Unknown error',
-            });
+            toast({ variant: 'destructive', title: 'Error al restaurar', description: err.message });
         } finally {
-            setImporting(false);
+            setRestoringFile(null);
+        }
+    };
+
+    const handleDelete = async (filename: string) => {
+        if (!confirm(`¿Eliminar el respaldo "${filename}"? Esta acción no se puede deshacer.`)) return;
+
+        setDeletingFile(filename);
+        try {
+            const res = await deleteLocalBackup(filename);
+            if (!res.success) throw new Error(res.error);
+            toast({ title: 'Respaldo eliminado' });
+            onRefresh();
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Error al eliminar', description: err.message });
+        } finally {
+            setDeletingFile(null);
         }
     };
 
     return (
         <div className="space-y-6">
-            {/* Export */}
+            {/* Create backup card */}
             <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
-                        <Download className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg">Export Database</CardTitle>
+                        <Database className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base">Crear respaldo ahora</CardTitle>
                     </div>
                     <CardDescription>
-                        Download all perfumes (or a specific brand) as a JSON file.
+                        Genera un respaldo JSON de toda la base de datos y lo sube a los destinos habilitados.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="export-brand">Brand filter (optional)</Label>
-                        <Input
-                            id="export-brand"
-                            placeholder="e.g. Chanel — leave blank to export all brands"
-                            value={exportBrand}
-                            onChange={e => setExportBrand(e.target.value)}
-                            className="max-w-sm"
-                        />
-                    </div>
-                    <Button
-                        onClick={handleExport}
-                        disabled={exporting}
-                        className="gap-2"
-                    >
-                        <FileJson className="h-4 w-4" />
-                        {exporting ? 'Exporting…' : 'Export JSON'}
-                    </Button>
-                </CardContent>
-            </Card>
-
-            {/* Import */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Upload className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg">Import Backup</CardTitle>
-                    </div>
-                    <CardDescription>
-                        Restore perfumes from a previously exported JSON backup file.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="import-file">Backup file (.json)</Label>
-                        <Input
-                            id="import-file"
-                            type="file"
-                            accept=".json,application/json"
-                            ref={fileInputRef}
-                            className="max-w-sm cursor-pointer"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Import mode</Label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer text-sm">
-                                <input
-                                    type="radio"
-                                    name="import-mode"
-                                    value="upsert"
-                                    checked={importMode === 'upsert'}
-                                    onChange={() => setImportMode('upsert')}
-                                    className="accent-primary"
-                                />
-                                Upsert (add / update existing)
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer text-sm">
-                                <input
-                                    type="radio"
-                                    name="import-mode"
-                                    value="replace"
-                                    checked={importMode === 'replace'}
-                                    onChange={() => setImportMode('replace')}
-                                    className="accent-primary"
-                                />
-                                Replace all
-                            </label>
+                    <div className="flex gap-3">
+                        <div className="flex-1 max-w-xs">
+                            <Input
+                                placeholder="Filtrar por marca (opcional)"
+                                value={createBrand}
+                                onChange={e => setCreateBrand(e.target.value)}
+                            />
                         </div>
-                        {importMode === 'replace' && (
-                            <p className="flex items-center gap-1.5 text-xs text-destructive">
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                Replace mode will overwrite existing records via upsert on source URL.
-                            </p>
-                        )}
+                        <Button onClick={handleCreate} disabled={creating} className="gap-2">
+                            {creating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <HardDrive className="h-4 w-4" />}
+                            {creating ? 'Creando…' : 'Crear respaldo'}
+                        </Button>
+                        <Button variant="outline" onClick={handleDownloadJson} disabled={downloadingJson} className="gap-2">
+                            <Download className="h-4 w-4" />
+                            {downloadingJson ? 'Descargando…' : 'Descargar JSON'}
+                        </Button>
                     </div>
-
-                    <Button
-                        onClick={handleImport}
-                        disabled={importing}
-                        className="gap-2"
-                    >
-                        <Database className="h-4 w-4" />
-                        {importing ? 'Importing…' : 'Import'}
-                    </Button>
-
-                    {importResult && (
-                        <p className="text-sm text-muted-foreground">
-                            Successfully imported <span className="font-semibold text-foreground">{importResult.imported}</span> perfume(s).
+                    {lastBackupAt && (
+                        <p className="text-xs text-muted-foreground">
+                            Último respaldo: {formatDate(lastBackupAt)}
                         </p>
                     )}
                 </CardContent>
             </Card>
+
+            {/* Local backups list */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <FileJson className="h-4 w-4 text-primary" />
+                            <CardTitle className="text-base">Respaldos locales</CardTitle>
+                            {backups.length > 0 && (
+                                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                                    {backups.length}
+                                </span>
+                            )}
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading} className="h-8 gap-1.5">
+                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            Actualizar
+                        </Button>
+                    </div>
+                    <CardDescription>
+                        Los últimos 30 respaldos se guardan en el servidor. Se eliminan los más antiguos automáticamente.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="text-sm text-muted-foreground text-center py-6">Cargando…</div>
+                    ) : backups.length === 0 ? (
+                        <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-lg">
+                            No hay respaldos locales. Crea uno ahora.
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {backups.map(b => (
+                                <div
+                                    key={b.name}
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+                                >
+                                    <FileJson className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-mono truncate">{b.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {formatDate(b.createdAt)} · {formatBytes(b.size)}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-xs gap-1"
+                                            onClick={() => handleRestore(b.name)}
+                                            disabled={restoringFile === b.name || deletingFile === b.name}
+                                        >
+                                            {restoringFile === b.name
+                                                ? <RefreshCw className="h-3 w-3 animate-spin" />
+                                                : <RotateCcw className="h-3 w-3" />}
+                                            Restaurar
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                            onClick={() => handleDelete(b.name)}
+                                            disabled={deletingFile === b.name || restoringFile === b.name}
+                                        >
+                                            {deletingFile === b.name
+                                                ? <RefreshCw className="h-3 w-3 animate-spin" />
+                                                : <Trash2 className="h-3.5 w-3.5" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+// ─── Tab: Destinos ────────────────────────────────────────────────────────────
+
+interface DestinationsTabProps {
+    config: BackupConfig;
+    onChange: (c: BackupConfig) => void;
+    onSave: () => void;
+    saving: boolean;
+}
+
+function DestinationsTab({ config, onChange, onSave, saving }: DestinationsTabProps) {
+    const { toast } = useToast();
+    const [testingId, setTestingId] = useState<string | null>(null);
+    const [testResults, setTestResults] = useState<Record<string, { success: boolean; message?: string }>>({});
+
+    const destinations = config.destinations || [];
+
+    function addDestination() {
+        const newDest: BackupDestination = {
+            id: newDestId(),
+            name: 'Nuevo destino',
+            type: 'webdav',
+            enabled: false,
+            config: {},
+        };
+        onChange({ ...config, destinations: [...destinations, newDest] });
+    }
+
+    function updateDest(updated: BackupDestination) {
+        onChange({
+            ...config,
+            destinations: destinations.map(d => (d.id === updated.id ? updated : d)),
+        });
+    }
+
+    function deleteDest(id: string) {
+        onChange({ ...config, destinations: destinations.filter(d => d.id !== id) });
+    }
+
+    async function testDest(dest: BackupDestination) {
+        setTestingId(dest.id);
+        setTestResults(r => ({ ...r, [dest.id]: undefined as any }));
+        try {
+            const res = await testBackupDestination(dest.type, dest.config);
+            setTestResults(r => ({ ...r, [dest.id]: res }));
+            toast({
+                title: res.success ? 'Conexión exitosa' : 'Error de conexión',
+                description: res.message || res.error || '',
+                variant: res.success ? 'default' : 'destructive',
+            });
+        } catch (err: any) {
+            setTestResults(r => ({ ...r, [dest.id]: { success: false, message: err.message } }));
+        } finally {
+            setTestingId(null);
+        }
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-medium text-sm">Destinos de respaldo</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Configura uno o más destinos para subir automáticamente los respaldos.
+                    </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={addDestination} className="gap-2">
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar destino
+                </Button>
+            </div>
+
+            {destinations.length === 0 ? (
+                <div className="text-center py-8 border border-dashed rounded-lg text-muted-foreground text-sm">
+                    <Cloud className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p>No hay destinos configurados.</p>
+                    <p className="text-xs mt-1">Agrega WebDAV, SFTP o Google Drive para subir respaldos automáticamente.</p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {destinations.map(dest => (
+                        <DestinationForm
+                            key={dest.id}
+                            dest={dest}
+                            onChange={updateDest}
+                            onDelete={() => deleteDest(dest.id)}
+                            onTest={testDest}
+                            testing={testingId === dest.id}
+                            testResult={testResults[dest.id] || null}
+                        />
+                    ))}
+                </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+                <Button onClick={onSave} disabled={saving} className="gap-2">
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? 'Guardando…' : 'Guardar destinos'}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Tab: Programar ───────────────────────────────────────────────────────────
+
+interface ScheduleTabProps {
+    config: BackupConfig;
+    onChange: (c: BackupConfig) => void;
+    onSave: () => void;
+    saving: boolean;
+}
+
+function ScheduleTab({ config, onChange, onSave, saving }: ScheduleTabProps) {
+    function set<K extends keyof BackupConfig>(key: K, value: BackupConfig[K]) {
+        onChange({ ...config, [key]: value });
+    }
+
+    // Compute next scheduled time for display
+    function nextScheduleLabel() {
+        if (!config.scheduleEnabled) return null;
+        const type = config.scheduleType || 'daily';
+        const time = config.scheduleTime || '02:00';
+        if (type === 'daily') return `Todos los días a las ${time} UTC`;
+        if (type === 'weekly') {
+            const day = WEEKDAYS.find(d => d.value === config.scheduleDay)?.label || 'Domingo';
+            return `Cada ${day} a las ${time} UTC`;
+        }
+        if (type === 'monthly') {
+            return `El día ${config.scheduleDay ?? 1} de cada mes a las ${time} UTC`;
+        }
+        return null;
+    }
+
+    return (
+        <div className="space-y-6 max-w-lg">
+            <Card>
+                <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base">Respaldos automáticos</CardTitle>
+                    </div>
+                    <CardDescription>
+                        El servidor ejecutará el respaldo en el horario configurado y lo subirá a los destinos habilitados.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                    {/* Enable toggle */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label className="text-sm font-medium">Activar respaldos automáticos</Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Se ejecuta en el servidor, independientemente del navegador.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => set('scheduleEnabled', !config.scheduleEnabled)}
+                            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${config.scheduleEnabled ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
+                        >
+                            <span
+                                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.scheduleEnabled ? 'left-6' : 'left-1'}`}
+                            />
+                        </button>
+                    </div>
+
+                    {config.scheduleEnabled && (
+                        <div className="space-y-4 pl-0">
+                            {/* Frequency */}
+                            <div className="space-y-1.5">
+                                <Label>Frecuencia</Label>
+                                <div className="flex gap-2">
+                                    {SCHEDULE_TYPES.map(t => (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => set('scheduleType', t.value)}
+                                            className={`flex-1 py-1.5 rounded-md text-sm border transition-colors ${config.scheduleType === t.value
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'border-border hover:bg-muted/50'}`}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Time */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="schedule-time">Hora (UTC)</Label>
+                                <Input
+                                    id="schedule-time"
+                                    type="time"
+                                    value={config.scheduleTime || '02:00'}
+                                    onChange={e => set('scheduleTime', e.target.value)}
+                                    className="max-w-[140px]"
+                                />
+                            </div>
+
+                            {/* Day of week (weekly) */}
+                            {config.scheduleType === 'weekly' && (
+                                <div className="space-y-1.5">
+                                    <Label>Día de la semana</Label>
+                                    <select
+                                        value={config.scheduleDay ?? 0}
+                                        onChange={e => set('scheduleDay', parseInt(e.target.value))}
+                                        className="flex h-9 w-full max-w-[200px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    >
+                                        {WEEKDAYS.map(d => (
+                                            <option key={d.value} value={d.value}>{d.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Day of month (monthly) */}
+                            {config.scheduleType === 'monthly' && (
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="schedule-dom">Día del mes</Label>
+                                    <Input
+                                        id="schedule-dom"
+                                        type="number"
+                                        min={1}
+                                        max={28}
+                                        value={config.scheduleDay ?? 1}
+                                        onChange={e => set('scheduleDay', parseInt(e.target.value))}
+                                        className="max-w-[100px]"
+                                    />
+                                    <p className="text-xs text-muted-foreground">1–28 para asegurar compatibilidad con todos los meses.</p>
+                                </div>
+                            )}
+
+                            {/* Next run preview */}
+                            {nextScheduleLabel() && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2.5">
+                                    <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span>Próximo respaldo: <strong className="text-foreground">{nextScheduleLabel()}</strong></span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Last backup */}
+                    {config.lastBackupAt && (
+                        <div className="text-xs text-muted-foreground pt-1 border-t border-border">
+                            Último respaldo realizado: <strong>{formatDate(config.lastBackupAt)}</strong>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+                <Button onClick={onSave} disabled={saving} className="gap-2">
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? 'Guardando…' : 'Guardar configuración'}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+type Tab = 'backups' | 'destinations' | 'schedule';
+
+export function DatabaseBackup() {
+    const { toast } = useToast();
+    const [activeTab, setActiveTab] = useState<Tab>('backups');
+
+    // Config state
+    const [config, setConfig] = useState<BackupConfig>({
+        destinations: [],
+        scheduleEnabled: false,
+        scheduleType: 'daily',
+        scheduleTime: '02:00',
+        scheduleDay: 0,
+    });
+    const [loadingConfig, setLoadingConfig] = useState(true);
+    const [savingConfig, setSavingConfig] = useState(false);
+
+    // Backups list state
+    const [backups, setBackups] = useState<LocalBackup[]>([]);
+    const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+    const [loadingBackups, setLoadingBackups] = useState(false);
+
+    useEffect(() => {
+        loadConfig();
+        loadBackups();
+    }, []);
+
+    async function loadConfig() {
+        setLoadingConfig(true);
+        try {
+            const res = await getBackupConfig();
+            if (res.success && res.config) {
+                setConfig(prev => ({
+                    destinations: [],
+                    scheduleEnabled: false,
+                    scheduleType: 'daily',
+                    scheduleTime: '02:00',
+                    scheduleDay: 0,
+                    ...res.config,
+                }));
+            }
+        } catch {}
+        setLoadingConfig(false);
+    }
+
+    async function loadBackups() {
+        setLoadingBackups(true);
+        try {
+            const res = await listLocalBackups();
+            if (res.success) {
+                setBackups(res.backups || []);
+                setLastBackupAt(res.lastBackupAt || null);
+            }
+        } catch {}
+        setLoadingBackups(false);
+    }
+
+    async function handleSave() {
+        setSavingConfig(true);
+        try {
+            const res = await saveBackupConfig(config);
+            if (!res.success) throw new Error(res.error);
+            toast({ title: 'Configuración guardada', description: 'Los cambios se han aplicado correctamente.' });
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Error al guardar', description: err.message });
+        } finally {
+            setSavingConfig(false);
+        }
+    }
+
+    const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+        { id: 'backups', label: 'Respaldos', icon: <HardDrive className="h-4 w-4" /> },
+        { id: 'destinations', label: 'Destinos', icon: <Cloud className="h-4 w-4" /> },
+        { id: 'schedule', label: 'Programar', icon: <Clock className="h-4 w-4" /> },
+    ];
+
+    if (loadingConfig) {
+        return (
+            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                Cargando configuración de respaldos…
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Tab bar */}
+            <div className="flex gap-1 border-b border-border">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${activeTab === tab.id
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                            }`}
+                    >
+                        {tab.icon}
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab content */}
+            {activeTab === 'backups' && (
+                <BackupsTab
+                    backups={backups}
+                    lastBackupAt={lastBackupAt}
+                    loading={loadingBackups}
+                    onRefresh={loadBackups}
+                />
+            )}
+
+            {activeTab === 'destinations' && (
+                <DestinationsTab
+                    config={config}
+                    onChange={setConfig}
+                    onSave={handleSave}
+                    saving={savingConfig}
+                />
+            )}
+
+            {activeTab === 'schedule' && (
+                <ScheduleTab
+                    config={config}
+                    onChange={setConfig}
+                    onSave={handleSave}
+                    saving={savingConfig}
+                />
+            )}
         </div>
     );
 }

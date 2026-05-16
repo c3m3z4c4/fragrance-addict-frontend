@@ -1402,7 +1402,166 @@ export async function uploadBrandLogosBulk(
     }
 }
 
-// ============= DATABASE BACKUP / RESTORE =============
+// ============= DATABASE BACKUP / RESTORE (new comprehensive API) =============
+
+const BACKUP_BASE = `${API_BASE_URL}/api/backup`;
+
+export interface BackupDestination {
+    id: string;
+    name: string;
+    type: 'webdav' | 'gdrive' | 'sftp';
+    enabled: boolean;
+    config: Record<string, string>;
+}
+
+export interface BackupConfig {
+    destinations?: BackupDestination[];
+    scheduleEnabled?: boolean;
+    scheduleType?: 'daily' | 'weekly' | 'monthly';
+    scheduleTime?: string;
+    scheduleDay?: number;
+    lastBackupAt?: string | null;
+}
+
+export interface LocalBackup {
+    name: string;
+    size: number;
+    createdAt: string;
+    path: string;
+}
+
+export async function getBackupConfig(): Promise<{ success: boolean; config?: BackupConfig; error?: string }> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/config`, { headers: getAuthHeader() });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function saveBackupConfig(config: BackupConfig): Promise<{ success: boolean; error?: string }> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify(config),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function createBackupNow(brand?: string): Promise<{
+    success: boolean;
+    filename?: string;
+    size?: number;
+    localPath?: string;
+    uploads?: Array<{ id: string; name: string; type: string; success: boolean; remotePath?: string; error?: string }>;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ brand: brand || undefined, upload: true }),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function listLocalBackups(): Promise<{
+    success: boolean;
+    backups?: LocalBackup[];
+    lastBackupAt?: string | null;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/list`, { headers: getAuthHeader() });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function restoreFromBackupFile(filename: string): Promise<{
+    success: boolean;
+    imported?: number;
+    total?: number;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ filename }),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function deleteLocalBackup(filename: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/local/${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: getAuthHeader(),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+export async function testBackupDestination(type: string, config: Record<string, string>): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+}> {
+    try {
+        const res = await fetch(`${BACKUP_BASE}/test-destination`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify({ type, config }),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { success: false, error: data.error || `Error ${res.status}` };
+        }
+        return res.json();
+    } catch (e: any) {
+        return { success: false, error: e?.message || 'Network error' };
+    }
+}
+
+// ============= DATABASE BACKUP / RESTORE (legacy) =============
 
 export async function exportBackup(brand?: string): Promise<void> {
     const url = brand
