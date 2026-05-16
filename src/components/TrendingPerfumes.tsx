@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePerfumes } from '@/hooks/usePerfumeSearch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BrandFilterCarousel } from '@/components/BrandFilterCarousel';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -24,14 +25,39 @@ function StarOrnament({ className = '' }: { className?: string }) {
 
 export function TrendingPerfumes() {
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const { t } = useTranslation();
 
     const { data, isLoading, error } = usePerfumes(1, 100);
 
     const allPerfumes = data?.perfumes || [];
-    const totalPages = Math.ceil(allPerfumes.length / ITEMS_PER_PAGE) || 1;
+
+    // Ordered unique brands from the perfume list (most recent first)
+    const recentBrands = useMemo(() => {
+        const seen = new Set<string>();
+        const result: string[] = [];
+        for (const p of allPerfumes) {
+            if (p.brand && !seen.has(p.brand)) {
+                seen.add(p.brand);
+                result.push(p.brand);
+            }
+        }
+        return result;
+    }, [allPerfumes]);
+
+    const filteredPerfumes = useMemo(
+        () => selectedBrand ? allPerfumes.filter((p) => p.brand === selectedBrand) : allPerfumes,
+        [allPerfumes, selectedBrand]
+    );
+
+    const handleBrandSelect = (brand: string | null) => {
+        setSelectedBrand(brand);
+        setCurrentPage(1);
+    };
+
+    const totalPages = Math.ceil(filteredPerfumes.length / ITEMS_PER_PAGE) || 1;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const perfumes = allPerfumes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const perfumes = filteredPerfumes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     if (error) {
         return (
@@ -63,6 +89,15 @@ export function TrendingPerfumes() {
                         {t('catalog.exploreLatest')}
                     </p>
                 </div>
+
+                {/* ── Brand filter carousel ───────────────────────────────── */}
+                {!isLoading && recentBrands.length > 0 && (
+                    <BrandFilterCarousel
+                        brands={recentBrands}
+                        selected={selectedBrand}
+                        onSelect={handleBrandSelect}
+                    />
+                )}
 
                 {/* ── Loading skeletons ────────────────────────────────────── */}
                 {isLoading ? (
