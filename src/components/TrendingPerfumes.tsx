@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandFilterCarousel } from '@/components/BrandFilterCarousel';
+import { GenderFilterButtons, type GenderFilter } from '@/components/GenderFilterButtons';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -26,6 +27,7 @@ function StarOrnament({ className = '' }: { className?: string }) {
 export function TrendingPerfumes() {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+    const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
     const { t } = useTranslation();
 
     const { data, isLoading, error } = usePerfumes(1, 100);
@@ -45,13 +47,19 @@ export function TrendingPerfumes() {
         return result;
     }, [allPerfumes]);
 
-    const filteredPerfumes = useMemo(
-        () => selectedBrand ? allPerfumes.filter((p) => p.brand === selectedBrand) : allPerfumes,
-        [allPerfumes, selectedBrand]
-    );
+    const filteredPerfumes = useMemo(() => {
+        let result = selectedBrand ? allPerfumes.filter((p) => p.brand === selectedBrand) : allPerfumes;
+        if (genderFilter !== 'all') result = result.filter((p) => p.gender === genderFilter);
+        return result;
+    }, [allPerfumes, selectedBrand, genderFilter]);
 
     const handleBrandSelect = (brand: string | null) => {
         setSelectedBrand(brand);
+        setCurrentPage(1);
+    };
+
+    const handleGenderSelect = (g: GenderFilter) => {
+        setGenderFilter(g);
         setCurrentPage(1);
     };
 
@@ -97,6 +105,13 @@ export function TrendingPerfumes() {
                         selected={selectedBrand}
                         onSelect={handleBrandSelect}
                     />
+                )}
+
+                {/* ── Gender filter ────────────────────────────────────────── */}
+                {!isLoading && (
+                    <div className="flex justify-center mb-10 md:mb-14">
+                        <GenderFilterButtons value={genderFilter} onChange={handleGenderSelect} />
+                    </div>
                 )}
 
                 {/* ── Loading skeletons ────────────────────────────────────── */}
