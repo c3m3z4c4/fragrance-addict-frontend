@@ -1120,21 +1120,40 @@ export interface BrandLogoResult {
     error?: string;
 }
 
-export async function fetchBrandLogos(): Promise<{
+export interface BrandLogosJobStatus {
     success: boolean;
+    status?: 'started' | 'already_running' | 'done';
+    running: boolean;
     total: number;
+    processed: number;
     updated: number;
     failed: number;
     results: BrandLogoResult[];
+    startedAt: string | null;
+    completedAt: string | null;
+    message?: string;
     error?: string;
-}> {
+}
+
+export async function fetchBrandLogos(): Promise<BrandLogosJobStatus> {
     const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos`, {
         method: 'POST',
         headers: { ...getAuthHeader() },
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        return { success: false, total: 0, updated: 0, failed: 0, results: [], error: data.error };
+        return { success: false, running: false, total: 0, processed: 0, updated: 0, failed: 0, results: [], startedAt: null, completedAt: null, error: data.error };
+    }
+    return res.json();
+}
+
+export async function getBrandLogosStatus(): Promise<BrandLogosJobStatus> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos/status`, {
+        headers: { ...getAuthHeader() },
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { success: false, running: false, total: 0, processed: 0, updated: 0, failed: 0, results: [], startedAt: null, completedAt: null, error: data.error };
     }
     return res.json();
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     scrapeBrand,
@@ -7,9 +7,11 @@ import {
     startQueue,
     stopQueue,
     fetchBrandLogos,
+    getBrandLogosStatus,
     fetchBrandsWithoutLogos,
     type BrandScrapeResult,
     type BrandLogoResult,
+    type BrandLogosJobStatus,
     type QueueStatus,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -61,7 +63,8 @@ export function BrandScraper() {
 
     // Logo fetching state
     const [isFetchingLogos, setIsFetchingLogos] = useState(false);
-    const [logoResults, setLogoResults] = useState<{ updated: number; failed: number; results: BrandLogoResult[] } | null>(null);
+    const [logoJob, setLogoJob] = useState<BrandLogosJobStatus | null>(null);
+    const logoPollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Brands without logos
     const [isFetchingMissing, setIsFetchingMissing] = useState(false);
@@ -120,22 +123,59 @@ export function BrandScraper() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const stopLogoPoller = () => {
+        if (logoPollerRef.current) {
+            clearInterval(logoPollerRef.current);
+            logoPollerRef.current = null;
+        }
+    };
+
+    useEffect(() => () => stopLogoPoller(), []);
+
+    const startLogoPoller = () => {
+        stopLogoPoller();
+        logoPollerRef.current = setInterval(async () => {
+            try {
+                const status = await getBrandLogosStatus();
+                setLogoJob(status);
+                if (!status.running) {
+                    stopLogoPoller();
+                    setIsFetchingLogos(false);
+                    if (status.completedAt) {
+                        toast.success(`Logos actualizados: ${status.updated} encontrados, ${status.failed} no encontrados`);
+                        queryClient.invalidateQueries({ queryKey: ['brands'] });
+                    }
+                }
+            } catch {
+                // ignore polling errors
+            }
+        }, 3000);
+    };
+
     const handleFetchLogos = async () => {
+        if (isFetchingLogos) return;
         setIsFetchingLogos(true);
-        setLogoResults(null);
-        toast.info('Searching Wikimedia Commons for brand logos… this may take a few minutes.');
+        setLogoJob(null);
         try {
             const result = await fetchBrandLogos();
-            if (result.success) {
-                setLogoResults(result);
-                toast.success(`Logos updated: ${result.updated} found, ${result.failed} not found`);
-                queryClient.invalidateQueries({ queryKey: ['brands'] });
+            if (result.status === 'already_running') {
+                toast.info('Ya hay un proceso de logos corriendo, mostrando progreso…');
+                setLogoJob(result.job as BrandLogosJobStatus ?? result);
+                startLogoPoller();
+            } else if (result.status === 'done') {
+                setLogoJob(result);
+                setIsFetchingLogos(false);
+                toast.info(result.message ?? 'Todas las marcas ya tienen logo');
+            } else if (result.status === 'started') {
+                toast.info(`Buscando logos en Fragrantica para ${result.total} marcas… esto puede tardar varios minutos.`);
+                setLogoJob(result);
+                startLogoPoller();
             } else {
-                toast.error(result.error ?? 'Failed to fetch logos');
+                toast.error(result.error ?? 'Error iniciando búsqueda de logos');
+                setIsFetchingLogos(false);
             }
         } catch {
-            toast.error('Failed to fetch logos');
-        } finally {
+            toast.error('Error al iniciar búsqueda de logos');
             setIsFetchingLogos(false);
         }
     };
@@ -464,7 +504,7 @@ export function BrandScraper() {
                         <ImageIcon className="h-5 w-5" /> Brand Logos
                     </CardTitle>
                     <CardDescription>
-                        Search Wikimedia Commons and other sources for official brand logos. Only strict logo files (SVG/PNG with "logo" in filename) are accepted — no portrait photos.
+                        Fetch brand logos directly from Fragrantica designer pages — the most reliable source for fragrance brand images. Runs in background, check progress below.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -474,44 +514,54 @@ export function BrandScraper() {
                         className="w-full sm:w-auto"
                     >
                         {isFetchingLogos ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Fetching logos…</>
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando logos…</>
                         ) : (
                             <><ImageIcon className="h-4 w-4 mr-2" /> Fetch All Brand Logos</>
                         )}
                     </Button>
 
-                    {isFetchingLogos && (
-                        <p className="text-xs text-muted-foreground animate-pulse">
-                            Searching Wikimedia Commons for SVG/PNG logo files… only strict logo matches accepted.
-                        </p>
+                    {isFetchingLogos && logoJob && logoJob.total > 0 && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="animate-pulse">Procesando marcas en Fragrantica…</span>
+                                <span>{logoJob.processed} / {logoJob.total}</span>
+                            </div>
+                            <Progress value={Math.round((logoJob.processed / logoJob.total) * 100)} className="h-1.5" />
+                            <div className="flex gap-4 text-xs">
+                                <span className="text-green-600 font-medium">{logoJob.updated} encontrados</span>
+                                <span className="text-muted-foreground">{logoJob.failed} no encontrados</span>
+                            </div>
+                        </div>
                     )}
 
-                    {logoResults && (
+                    {logoJob && (logoJob.updated > 0 || logoJob.failed > 0) && (
                         <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3 text-center">
                                 <div className="border rounded-sm p-3">
-                                    <p className="text-2xl font-bold text-green-600">{logoResults.updated}</p>
-                                    <p className="text-xs text-muted-foreground">Logos found</p>
+                                    <p className="text-2xl font-bold text-green-600">{logoJob.updated}</p>
+                                    <p className="text-xs text-muted-foreground">Logos encontrados</p>
                                 </div>
                                 <div className="border rounded-sm p-3">
-                                    <p className="text-2xl font-bold text-muted-foreground">{logoResults.failed}</p>
-                                    <p className="text-xs text-muted-foreground">Not found</p>
+                                    <p className="text-2xl font-bold text-muted-foreground">{logoJob.failed}</p>
+                                    <p className="text-xs text-muted-foreground">No encontrados</p>
                                 </div>
                             </div>
 
                             {/* Logo preview grid */}
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-64 overflow-y-auto">
-                                {logoResults.results
-                                    .filter(r => r.logoUrl)
-                                    .map(r => (
-                                        <div key={r.name} className="border rounded-sm p-2 bg-white flex flex-col items-center gap-1">
-                                            <img src={r.logoUrl!} alt={r.name}
-                                                className="h-10 w-full object-contain"
-                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                            <p className="text-[9px] text-center text-muted-foreground truncate w-full">{r.name}</p>
-                                        </div>
-                                    ))}
-                            </div>
+                            {logoJob.results.filter(r => r.logoUrl).length > 0 && (
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-64 overflow-y-auto">
+                                    {logoJob.results
+                                        .filter(r => r.logoUrl)
+                                        .map(r => (
+                                            <div key={r.name} className="border rounded-sm p-2 bg-white flex flex-col items-center gap-1">
+                                                <img src={r.logoUrl!} alt={r.name}
+                                                    className="h-10 w-full object-contain"
+                                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                <p className="text-[9px] text-center text-muted-foreground truncate w-full">{r.name}</p>
+                                            </div>
+                                        ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </CardContent>
