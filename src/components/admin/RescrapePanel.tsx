@@ -213,11 +213,22 @@ function ByBrandTab() {
     try {
       const res = await rescrapeBrand(brand.brand, direct);
       if (res.success) {
+        const alreadyQueued = (res as any).alreadyQueued ?? 0;
+        const added = (res as any).added ?? 0;
+        let description = '';
+        if (direct) {
+          description = `Procesados: ${res.processed}, Fallidos: ${res.failed}`;
+        } else if (alreadyQueued > 0 && added === 0) {
+          description = `Los ${alreadyQueued} perfumes de ${brand.brand} ya están en la cola pendientes.`;
+        } else if (alreadyQueued > 0) {
+          description = `${added} agregados a cola, ${alreadyQueued} ya estaban pendientes.`;
+        } else {
+          description = `${added} perfumes de ${brand.brand} agregados a cola (total: ${res.queueSize})`;
+        }
         toast({
-          title: direct ? 'Re-scrape completado' : 'Agregado a cola',
-          description: direct
-            ? `Procesados: ${res.processed}, Fallidos: ${res.failed}`
-            : `${res.added} perfumes de ${brand.brand} en cola (total: ${res.queueSize})`,
+          title: direct ? 'Re-scrape completado' : 'Cola actualizada',
+          description,
+          variant: alreadyQueued > 0 && added === 0 ? 'default' : 'default',
         });
         queryClient.invalidateQueries({ queryKey: ['incomplete-by-brand'] });
         queryClient.invalidateQueries({ queryKey: ['incomplete-perfumes'] });
