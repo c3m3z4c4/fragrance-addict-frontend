@@ -13,7 +13,7 @@ interface BrandFilterCarouselProps {
 function BrandAvatar({
     brand,
     logoUrl,
-    size = 44,
+    size = 64,
 }: {
     brand: string;
     logoUrl?: string | null;
@@ -163,9 +163,10 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
             {/* Scrollable track */}
             <div
                 ref={scrollRef}
-                className="flex items-start gap-3 overflow-x-auto px-10 md:px-12 pb-1 scroll-smooth"
+                className="overflow-x-auto scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
+            <div className="flex items-start gap-4 md:gap-6 px-10 md:px-12 pb-2 w-max min-w-full justify-center">
                 {/* "Todas" pill */}
                 <button
                     data-brand-item
@@ -178,7 +179,7 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
                     {/* Avatar */}
                     <div
                         className={cn(
-                            'w-11 h-11 rounded-full flex items-center justify-center transition-all duration-250',
+                            'w-16 h-16 rounded-full flex items-center justify-center transition-all duration-250',
                             'ring-2 ring-offset-2 ring-offset-background',
                             selected === null
                                 ? 'ring-accent bg-accent/10'
@@ -187,7 +188,7 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
                     >
                         <LayoutGrid
                             className={cn(
-                                'h-4 w-4 transition-colors duration-200',
+                                'h-5 w-5 transition-colors duration-200',
                                 selected === null ? 'text-accent' : 'text-foreground/40 group-hover:text-foreground/70'
                             )}
                         />
@@ -195,7 +196,7 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
                     {/* Label */}
                     <span
                         className={cn(
-                            'text-[10px] font-semibold tracking-wide leading-none max-w-[64px] text-center truncate transition-colors duration-200',
+                            'text-[11px] font-semibold tracking-wide leading-none max-w-[72px] text-center truncate transition-colors duration-200',
                             selected === null ? 'text-accent' : 'text-foreground/45 group-hover:text-foreground/70'
                         )}
                     >
@@ -221,19 +222,19 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
                             {/* Avatar */}
                             <div
                                 className={cn(
-                                    'w-11 h-11 rounded-full overflow-hidden transition-all duration-250',
+                                    'w-16 h-16 rounded-full overflow-hidden transition-all duration-250',
                                     'ring-2 ring-offset-2 ring-offset-background',
                                     isActive
                                         ? 'ring-accent shadow-[0_0_0_4px_hsl(var(--accent)/0.08)]'
                                         : 'ring-transparent group-hover:ring-border/60'
                                 )}
                             >
-                                <BrandAvatar brand={brand} logoUrl={logo} size={44} />
+                                <BrandAvatar brand={brand} logoUrl={logo} size={64} />
                             </div>
                             {/* Label */}
                             <span
                                 className={cn(
-                                    'text-[10px] font-semibold tracking-wide leading-none max-w-[64px] text-center truncate transition-colors duration-200',
+                                    'text-[11px] font-semibold tracking-wide leading-none max-w-[72px] text-center truncate transition-colors duration-200',
                                     isActive
                                         ? 'text-accent'
                                         : 'text-foreground/45 group-hover:text-foreground/70'
@@ -244,6 +245,7 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
                         </button>
                     );
                 })}
+            </div>
             </div>
         </div>
     );
