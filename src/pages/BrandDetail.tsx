@@ -76,11 +76,20 @@ const BrandDetail = () => {
           )}
         </div>
 
-        {/* Filter bar */}
+        {/* Gender filter — centrado bajo el header */}
         {!isLoading && perfumes.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 mb-8">
-            {/* Text search */}
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <div className="flex justify-center mb-8">
+            <GenderFilterButtons
+              value={genderFilter}
+              onChange={(g) => setGenderFilter(g)}
+            />
+          </div>
+        )}
+
+        {/* Barra de búsqueda */}
+        {!isLoading && perfumes.length > 0 && (
+          <div className="flex items-center gap-3 mb-8 max-w-xs">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder={t('brands.filterPerfumes')}
@@ -96,16 +105,6 @@ const BrandDetail = () => {
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
-            </div>
-
-            {/* Gender filter */}
-            <div className="flex items-center gap-2">
-              <GenderFilterButtons
-                value={genderFilter}
-                onChange={(g) => setGenderFilter(g)}
-                showLabels={false}
-                compact={false}
-              />
             </div>
           </div>
         )}
