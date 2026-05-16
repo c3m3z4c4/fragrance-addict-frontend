@@ -56,7 +56,7 @@ export function SearchHero() {
   };
 
   return (
-    <section className="relative min-h-[82vh] flex flex-col items-center justify-center overflow-hidden py-20">
+    <section className="relative flex flex-col items-center justify-center overflow-hidden pt-16 pb-10 sm:pt-24 sm:pb-16 md:pt-28 md:pb-20">
 
       {/* ── Layered atmospheric background ─────────────────────────────────── */}
       {/* Warm radial glow — emanates from top-center like a spotlight */}
@@ -75,7 +75,7 @@ export function SearchHero() {
       />
 
       {/* ── Decorative geometric arcs — top right corner ────────────────────── */}
-      <div className="absolute top-0 right-0 w-[540px] h-[540px] pointer-events-none overflow-hidden">
+      <div className="hidden sm:block absolute top-0 right-0 w-[540px] h-[540px] pointer-events-none overflow-hidden">
         <svg
           viewBox="0 0 540 540"
           fill="none"
@@ -115,7 +115,7 @@ export function SearchHero() {
         <div className="max-w-3xl mx-auto text-center">
 
           {/* Eyebrow — subtle category label */}
-          <div className="flex items-center justify-center gap-3 mb-8 opacity-0 animate-fade-in">
+          <div className="flex items-center justify-center gap-3 mb-6 md:mb-8 opacity-0 animate-fade-in">
             <div className="h-px w-8 bg-accent/50" />
             <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-muted-foreground/70">
               Fragrance Discovery
@@ -124,14 +124,14 @@ export function SearchHero() {
           </div>
 
           {/* Main headline — editorial split */}
-          <h1 className="mb-8 opacity-0 animate-fade-in animation-delay-100">
+          <h1 className="mb-6 md:mb-8 opacity-0 animate-fade-in animation-delay-100">
             {/* First line: Dosis, lightweight */}
-            <span className="block font-display text-5xl md:text-[4.5rem] lg:text-[5.5rem] font-light tracking-[-0.01em] leading-[0.95] text-foreground/85">
+            <span className="block font-display text-[2.6rem] sm:text-5xl md:text-[4.5rem] lg:text-[5.5rem] font-light tracking-[-0.01em] leading-[0.95] text-foreground/85">
               {t('search.title')}
             </span>
             {/* Second line: Cormorant Garamond italic — the luxury contrast */}
             <span
-              className="block text-5xl md:text-[4.5rem] lg:text-[5.5rem] font-light leading-[1.05] mt-1 text-accent"
+              className="block text-[2.6rem] sm:text-5xl md:text-[4.5rem] lg:text-[5.5rem] font-light leading-[1.05] mt-1 text-accent"
               style={{
                 fontFamily: 'var(--font-serif)',
                 fontStyle: 'italic',
@@ -143,7 +143,7 @@ export function SearchHero() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm md:text-base text-muted-foreground mb-12 max-w-lg mx-auto leading-relaxed tracking-wide opacity-0 animate-fade-in animation-delay-200">
+          <p className="text-sm md:text-base text-muted-foreground mb-8 md:mb-12 max-w-lg mx-auto leading-relaxed tracking-wide opacity-0 animate-fade-in animation-delay-200">
             {t('search.subtitle')}
           </p>
 
