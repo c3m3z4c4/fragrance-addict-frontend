@@ -44,7 +44,7 @@ export function TrendingPerfumes() {
     }
 
     return (
-        <section className="py-20 md:py-28">
+        <section className="pt-4 pb-16 md:pt-6 md:pb-24">
             <div className="container mx-auto px-4">
 
                 {/* ── Section header ──────────────────────────────────────── */}

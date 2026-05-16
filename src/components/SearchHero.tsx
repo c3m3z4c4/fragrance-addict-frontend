@@ -56,7 +56,7 @@ export function SearchHero() {
   };
 
   return (
-    <section className="relative flex flex-col items-center justify-center overflow-hidden pt-16 pb-10 sm:pt-24 sm:pb-16 md:pt-28 md:pb-20">
+    <section className="relative flex flex-col items-center justify-center overflow-hidden pt-14 pb-6 sm:pt-20 sm:pb-10 md:pt-24 md:pb-12">
 
       {/* ── Layered atmospheric background ─────────────────────────────────── */}
       {/* Warm radial glow — emanates from top-center like a spotlight */}
@@ -276,19 +276,22 @@ export function SearchHero() {
 
           {/* Trending search hints */}
           <div className={cn(
-            'relative z-0 mt-8 flex flex-wrap justify-center items-center gap-2 opacity-0 animate-fade-in animation-delay-400',
+            'relative z-0 mt-6 flex items-center justify-center gap-0 opacity-0 animate-fade-in animation-delay-400',
             genderFilter !== 'all' && 'mt-3'
           )}>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50 mr-1">
-              {t('search.trending')}
-            </span>
-            {['Dior Sauvage', 'Vanilla', 'Oud', 'Chanel No. 5'].map((hint) => (
+            {['Dior Sauvage', 'Vanilla', 'Oud', 'Chanel No. 5'].map((hint, i) => (
               <button
                 key={hint}
                 onClick={() => handleHintClick(hint)}
-                className="text-xs px-3.5 py-1.5 rounded-full border border-border/50 text-foreground/60 hover:border-accent/50 hover:text-accent hover:bg-accent/5 transition-all duration-200"
+                className="group relative flex items-center"
               >
-                {hint}
+                {i > 0 && (
+                  <span className="text-border/60 mx-3 select-none text-[10px]">·</span>
+                )}
+                <span className="relative text-[11px] tracking-wide text-foreground/45 group-hover:text-accent transition-colors duration-200">
+                  {hint}
+                  <span className="absolute -bottom-px left-0 w-0 h-px bg-accent/50 group-hover:w-full transition-all duration-300" />
+                </span>
               </button>
             ))}
           </div>
@@ -296,7 +299,7 @@ export function SearchHero() {
       </div>
 
       {/* Bottom fade into catalog section */}
-      <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </section>
   );
 }
