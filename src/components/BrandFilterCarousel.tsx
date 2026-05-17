@@ -108,7 +108,7 @@ export function BrandFilterCarousel({ brands, selected, onSelect }: BrandFilterC
     if (brands.length === 0) return null;
 
     return (
-        <div className="relative mb-10 md:mb-14">
+        <div className="relative mb-10 md:mb-14 w-full overflow-hidden">
             {/* Section label */}
             <p className="text-center text-[10px] font-bold tracking-[0.25em] uppercase text-muted-foreground/45 mb-5">
                 Filtrar por marca
