@@ -21,17 +21,13 @@ import {
 
 export function ApiKeys() {
     const navigate = useNavigate();
-    const { apiKey } = useAuth();
+    const { apiKey, isAdmin } = useAuth();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
     useEffect(() => {
-        // Check if user has API key stored
-        if (!apiKey) {
-            setIsAuthorized(false);
-        } else {
-            setIsAuthorized(true);
-        }
-    }, [apiKey]);
+        // SUPERADMIN session bypasses the API key wall
+        setIsAuthorized(isAdmin || !!apiKey);
+    }, [apiKey, isAdmin]);
 
     const handleLogout = () => {
         localStorage.removeItem('apiKey');
