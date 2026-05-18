@@ -152,12 +152,12 @@ export function BrandScraper() {
         }, 3000);
     };
 
-    const handleFetchLogos = async () => {
+    const handleFetchLogos = async (force = false) => {
         if (isFetchingLogos) return;
         setIsFetchingLogos(true);
         setLogoJob(null);
         try {
-            const result = await fetchBrandLogos();
+            const result = await fetchBrandLogos(force);
             if (result.status === 'already_running') {
                 toast.info('Ya hay un proceso de logos corriendo, mostrando progreso…');
                 setLogoJob(result.job as BrandLogosJobStatus ?? result);
@@ -167,7 +167,7 @@ export function BrandScraper() {
                 setIsFetchingLogos(false);
                 toast.info(result.message ?? 'Todas las marcas ya tienen logo');
             } else if (result.status === 'started') {
-                toast.info(`Buscando logos en Fragrantica para ${result.total} marcas… esto puede tardar varios minutos.`);
+                toast.info(`Buscando logos (${force ? 'forzado' : 'solo sin logo'}) para ${result.total} marcas — Clearbit → DDG → Parfumo → Fragrantica`);
                 setLogoJob(result);
                 startLogoPoller();
             } else {
@@ -504,26 +504,35 @@ export function BrandScraper() {
                         <ImageIcon className="h-5 w-5" /> Brand Logos
                     </CardTitle>
                     <CardDescription>
-                        Fetch brand logos directly from Fragrantica designer pages — the most reliable source for fragrance brand images. Runs in background, check progress below.
+                        Busca logos en múltiples fuentes: <strong>Clearbit → DuckDuckGo → Parfumo → Fragrantica</strong>. Corre en background — consulta el progreso abajo.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button
-                        onClick={handleFetchLogos}
-                        disabled={isFetchingLogos}
-                        className="w-full sm:w-auto"
-                    >
-                        {isFetchingLogos ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando logos…</>
-                        ) : (
-                            <><ImageIcon className="h-4 w-4 mr-2" /> Fetch All Brand Logos</>
-                        )}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            onClick={() => handleFetchLogos(false)}
+                            disabled={isFetchingLogos}
+                        >
+                            {isFetchingLogos ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando logos…</>
+                            ) : (
+                                <><ImageIcon className="h-4 w-4 mr-2" /> Fetch logos sin logo</>
+                            )}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => handleFetchLogos(true)}
+                            disabled={isFetchingLogos}
+                            title="Re-fetch logos para TODAS las marcas, incluyendo las que ya tienen uno"
+                        >
+                            <ImageIcon className="h-4 w-4 mr-2" /> Re-fetch todos (forzar)
+                        </Button>
+                    </div>
 
                     {isFetchingLogos && logoJob && logoJob.total > 0 && (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span className="animate-pulse">Procesando marcas en Fragrantica…</span>
+                                <span className="animate-pulse">Probando Clearbit → DDG → Parfumo → Fragrantica…</span>
                                 <span>{logoJob.processed} / {logoJob.total}</span>
                             </div>
                             <Progress value={Math.round((logoJob.processed / logoJob.total) * 100)} className="h-1.5" />
@@ -547,7 +556,7 @@ export function BrandScraper() {
                                 </div>
                             </div>
 
-                            {/* Logo preview grid */}
+                            {/* Logo preview grid with source badge */}
                             {logoJob.results.filter(r => r.logoUrl).length > 0 && (
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-64 overflow-y-auto">
                                     {logoJob.results
@@ -558,6 +567,9 @@ export function BrandScraper() {
                                                     className="h-10 w-full object-contain"
                                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                                 <p className="text-[9px] text-center text-muted-foreground truncate w-full">{r.name}</p>
+                                                {(r as any).source && (
+                                                    <span className="text-[8px] text-accent/70 font-mono">{(r as any).source}</span>
+                                                )}
                                             </div>
                                         ))}
                                 </div>

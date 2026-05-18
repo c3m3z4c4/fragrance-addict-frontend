@@ -1255,10 +1255,11 @@ export interface BrandLogosJobStatus {
     error?: string;
 }
 
-export async function fetchBrandLogos(): Promise<BrandLogosJobStatus> {
+export async function fetchBrandLogos(force = false): Promise<BrandLogosJobStatus> {
     const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos`, {
         method: 'POST',
-        headers: { ...getAuthHeader() },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ force }),
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
