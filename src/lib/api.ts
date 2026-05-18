@@ -412,6 +412,9 @@ export interface PerfumerInfo {
     name: string;
     count: number;
     imageUrl: string | null;
+    bio?: string | null;
+    nationality?: string | null;
+    verified?: boolean;
 }
 
 // Get all perfumers with count and image
@@ -426,10 +429,47 @@ export async function fetchPerfumers(): Promise<PerfumerInfo[]> {
             name: item.name ?? item,
             count: item.count ?? 0,
             imageUrl: item.imageUrl ?? item.image_url ?? null,
+            bio: item.bio ?? null,
+            nationality: item.nationality ?? null,
+            verified: item.verified ?? false,
         }));
     } catch (error) {
         console.error('❌ Fetch perfumers error:', error);
         return [];
+    }
+}
+
+// Admin: upsert verified perfumer data
+export async function upsertPerfumerData(
+    name: string,
+    data: { imageUrl?: string; bio?: string; nationality?: string },
+    token: string
+): Promise<boolean> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumers/${encodeURIComponent(name)}`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(data),
+            }
+        );
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
+// Admin: delete verified perfumer data (revert to scraped)
+export async function deletePerfumerData(name: string, token: string): Promise<boolean> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumers/${encodeURIComponent(name)}`,
+            { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+        );
+        return response.ok;
+    } catch {
+        return false;
     }
 }
 

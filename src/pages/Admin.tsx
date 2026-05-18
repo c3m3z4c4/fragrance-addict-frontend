@@ -17,8 +17,9 @@ import { AboutEditor } from '@/components/admin/AboutEditor';
 import { AISettings } from '@/components/admin/AISettings';
 import { DuplicateManager } from '@/components/admin/DuplicateManager';
 import { DatabaseBackup } from '@/components/admin/DatabaseBackup';
+import { PerfumerManager } from '@/components/admin/PerfumerManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy, HardDrive } from 'lucide-react';
+import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy, HardDrive, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -114,6 +115,7 @@ export default function Admin() {
                 { value: 'about',      icon: <FileText className="h-3.5 w-3.5" />,   label: 'About' },
                 { value: 'ai',         icon: <Bot className="h-3.5 w-3.5" />,        label: 'AI' },
                 { value: 'backup',     icon: <HardDrive className="h-3.5 w-3.5" />,  label: 'Backup' },
+                { value: 'perfumers',  icon: <UserCheck className="h-3.5 w-3.5" />,              label: 'Perfumistas' },
                 { value: 'reset',      icon: <Trash2 className="h-3.5 w-3.5 text-destructive" />, label: 'Reset', destructive: true },
               ] as const).map(({ value, icon, label, destructive }: any) => (
                 <TabsTrigger
@@ -178,6 +180,10 @@ export default function Admin() {
 
           <TabsContent value="backup" className="animate-fade-in">
             <DatabaseBackup />
+          </TabsContent>
+
+          <TabsContent value="perfumers" className="animate-fade-in">
+            <PerfumerManager />
           </TabsContent>
 
           <TabsContent value="reset" className="animate-fade-in">
