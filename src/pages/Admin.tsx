@@ -20,7 +20,6 @@ import { DatabaseBackup } from '@/components/admin/DatabaseBackup';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database, Sparkles, BarChart3, Globe, Wifi, WifiOff, Loader2, RefreshCw, Activity, Users, Layers, Trash2, FileText, Bot, Copy, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -50,18 +49,18 @@ export default function Admin() {
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="font-display text-3xl md:text-4xl font-medium mb-2">
               Admin Panel
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Manage your perfume catalog and scraping operations
             </p>
           </div>
 
           {/* Quick actions + Status */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => navigate('/admin/activity')}
               className="text-[11px] tracking-[0.1em] uppercase font-bold gap-1.5">
               <Activity className="h-3.5 w-3.5" />
@@ -69,36 +68,32 @@ export default function Admin() {
             </Button>
 
             {/* Backend Status */}
-            <Card className="flex-shrink-0">
-              <CardHeader className="py-2 px-4">
-                <div className="flex items-center gap-2">
-                  {backendStatus === 'checking' && (
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Checking…
-                    </span>
-                  )}
-                  {backendStatus === 'online' && (
-                    <span className="flex items-center gap-1.5 text-xs text-green-600">
-                      <Wifi className="h-3 w-3" /> Backend Online
-                    </span>
-                  )}
-                  {backendStatus === 'offline' && (
-                    <span className="flex items-center gap-1.5 text-xs text-destructive">
-                      <WifiOff className="h-3 w-3" /> Backend Offline
-                    </span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={checkBackend}
-                    disabled={backendStatus === 'checking'}
-                  >
-                    <RefreshCw className={`h-3 w-3 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
+            <div className="flex items-center gap-1.5 border border-border rounded-lg py-1.5 px-3 text-xs">
+              {backendStatus === 'checking' && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Checking…
+                </span>
+              )}
+              {backendStatus === 'online' && (
+                <span className="flex items-center gap-1.5 text-green-600">
+                  <Wifi className="h-3 w-3" /> Backend Online
+                </span>
+              )}
+              {backendStatus === 'offline' && (
+                <span className="flex items-center gap-1.5 text-destructive">
+                  <WifiOff className="h-3 w-3" /> Backend Offline
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 ml-0.5"
+                onClick={checkBackend}
+                disabled={backendStatus === 'checking'}
+              >
+                <RefreshCw className={`h-3 w-3 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </div>
 
