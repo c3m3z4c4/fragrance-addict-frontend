@@ -392,6 +392,47 @@ export async function fetchPerfumesByBrand(
     }
 }
 
+// Get perfumes by perfumer
+export async function fetchPerfumesByPerfumer(name: string): Promise<APIPerfume[]> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumes/perfumer/${encodeURIComponent(name)}`
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        const results: any[] = data.data ?? data.perfumes ?? (Array.isArray(data) ? data : []);
+        return results.map((item) => deepSanitizePerfume(item));
+    } catch (error) {
+        console.error('❌ Fetch perfumer perfumes error:', error);
+        return [];
+    }
+}
+
+export interface PerfumerInfo {
+    name: string;
+    count: number;
+    imageUrl: string | null;
+}
+
+// Get all perfumers with count and image
+export async function fetchPerfumers(): Promise<PerfumerInfo[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/perfumes/perfumers`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        const raw = data.data ?? data.perfumers ?? data;
+        if (!Array.isArray(raw)) return [];
+        return raw.map((item: any) => ({
+            name: item.name ?? item,
+            count: item.count ?? 0,
+            imageUrl: item.imageUrl ?? item.image_url ?? null,
+        }));
+    } catch (error) {
+        console.error('❌ Fetch perfumers error:', error);
+        return [];
+    }
+}
+
 export interface BrandInfo {
     name: string;
     count: number;

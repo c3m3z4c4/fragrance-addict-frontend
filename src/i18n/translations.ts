@@ -6,6 +6,7 @@ export const translations = {
         home: 'Home',
         favorites: 'Favorites',
         brands: 'Brands',
+        perfumers: 'Perfumers',
         about: 'About',
         admin: 'Admin',
         apiKeys: 'API Keys',
@@ -145,6 +146,12 @@ export const translations = {
         fragrance: 'fragrance',
         fragrances: 'fragrances',
       },
+      perfumers: {
+        title: 'Master Perfumers',
+        subtitle: 'Discover the artists behind the world\'s most iconic fragrances',
+        fragrance: 'fragrance',
+        fragrances: 'fragrances',
+      },
       // Filters
       filter: {
         title: 'Filters',
@@ -246,6 +253,7 @@ export const translations = {
         home: 'Inicio',
         favorites: 'Favoritos',
         brands: 'Marcas',
+        perfumers: 'Perfumistas',
         about: 'Acerca de',
         admin: 'Admin',
         apiKeys: 'API Keys',
@@ -382,6 +390,12 @@ export const translations = {
         searchPlaceholder: 'Buscar marcas...',
         filterPerfumes: 'Buscar perfume...',
         perfumes: 'perfumes',
+        fragrance: 'fragancia',
+        fragrances: 'fragancias',
+      },
+      perfumers: {
+        title: 'Maestros Perfumistas',
+        subtitle: 'Descubre a los artistas detrás de las fragancias más icónicas del mundo',
         fragrance: 'fragancia',
         fragrances: 'fragancias',
       },

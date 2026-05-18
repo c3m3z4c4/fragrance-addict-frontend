@@ -17,6 +17,8 @@ import PerfumeDetail from './pages/PerfumeDetail';
 import Favorites from './pages/Favorites';
 import Brands from './pages/Brands';
 import BrandDetail from './pages/BrandDetail';
+import Perfumers from './pages/Perfumers';
+import PerfumerDetail from './pages/PerfumerDetail';
 import About from './pages/About';
 import Search from './pages/Search';
 import { SearchDebug } from './pages/SearchDebug';
@@ -81,6 +83,8 @@ function AppRoutes() {
             />
             <Route path="/brands" element={<Brands />} />
             <Route path="/brands/:brand" element={<BrandDetail />} />
+            <Route path="/perfumers" element={<Perfumers />} />
+            <Route path="/perfumers/:name" element={<PerfumerDetail />} />
             <Route path="/about" element={<About />} />
             <Route path="/recommendations" element={<AIRecommendations />} />
             <Route path="/login" element={<Login />} />

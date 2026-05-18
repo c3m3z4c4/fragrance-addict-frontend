@@ -33,6 +33,7 @@ export function Header({ onSearchClick }: HeaderProps = {}) {
         { href: '/', label: t('nav.home') },
         ...(isLoggedIn ? [{ href: '/favorites', label: t('nav.favorites') }] : []),
         { href: '/brands', label: t('nav.brands') },
+        { href: '/perfumers', label: t('nav.perfumers', { defaultValue: 'Perfumers' }) },
         { href: '/about', label: t('nav.about') },
         ...(isGmailUser ? [{ href: '/recommendations', label: t('nav.aiRecommendations', { defaultValue: '✨ AI' }) }] : []),
         ...(isAdmin ? [{ href: '/admin', label: t('nav.admin') }] : []),
