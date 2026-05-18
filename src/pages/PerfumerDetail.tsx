@@ -1,45 +1,100 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { PerfumeCard } from '@/components/PerfumeCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { GenderFilterButtons, type GenderFilter } from '@/components/GenderFilterButtons';
-import { fetchPerfumesByPerfumer } from '@/lib/api';
+import { fetchPerfumerBrands } from '@/lib/api';
+import { cn } from '@/lib/utils';
+
+function nameHue(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return Math.abs(hash) % 360;
+}
+
+function brandToKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim().replace(/\s+/g, '_').replace(/_+/g, '_');
+}
+
+interface BrandCardProps {
+  perfumer: string;
+  name: string;
+  count: number;
+  imageUrl: string | null;
+  index: number;
+}
+
+function BrandCard({ perfumer, name, count, imageUrl, index }: BrandCardProps) {
+  const { t } = useTranslation();
+  const localLogo = `/logos/${brandToKey(name)}.png`;
+  const [triedLocal, setTriedLocal] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const currentSrc = imageUrl && !triedLocal ? imageUrl : localLogo;
+  const handleError = () => {
+    if (!triedLocal && imageUrl) { setTriedLocal(true); }
+    else { setImgError(true); }
+  };
+
+  const hue = nameHue(name);
+
+  return (
+    <Link
+      to={`/perfumers/${encodeURIComponent(perfumer)}/brand/${encodeURIComponent(name)}`}
+      className={cn(
+        'group rounded-lg overflow-hidden opacity-0 animate-fade-in',
+        'border border-border/60 hover:border-accent/40 hover-lift transition-all duration-300'
+      )}
+      style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'forwards' }}
+    >
+      <div
+        className="aspect-[4/3] flex items-center justify-center overflow-hidden"
+        style={!imgError ? { background: '#fff' } : {
+          background: `linear-gradient(135deg, hsl(${hue} 20% 94%) 0%, hsl(${hue} 30% 88%) 100%)`,
+        }}
+      >
+        {!imgError ? (
+          <img
+            src={currentSrc}
+            alt={name}
+            className="w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+            onError={handleError}
+          />
+        ) : (
+          <span
+            className="font-display text-3xl font-bold tracking-widest select-none group-hover:text-accent transition-colors"
+            style={{ color: `hsl(${hue} 40% 30%)` }}
+          >
+            {name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 border-t border-border/40 bg-background">
+        <h2 className="font-display text-base font-medium truncate">{name}</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {count} {count === 1 ? t('perfumers.fragrance') : t('perfumers.fragrances')}
+        </p>
+      </div>
+    </Link>
+  );
+}
 
 const PerfumerDetail = () => {
   const { name } = useParams<{ name: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
 
   const decodedName = name ? decodeURIComponent(name) : '';
 
-  const { data: perfumes = [], isLoading } = useQuery({
-    queryKey: ['perfumer-perfumes', decodedName],
-    queryFn: () => fetchPerfumesByPerfumer(decodedName),
+  const { data: brands = [], isLoading } = useQuery({
+    queryKey: ['perfumer-brands', decodedName],
+    queryFn: () => fetchPerfumerBrands(decodedName),
     enabled: !!decodedName,
     staleTime: 5 * 60 * 1000,
   });
-
-  const filtered = useMemo(() => {
-    let result = perfumes;
-    if (genderFilter !== 'all') {
-      result = result.filter(p => p.gender === genderFilter);
-    }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter(p => p.name?.toLowerCase().includes(q));
-    }
-    return result;
-  }, [perfumes, genderFilter, search]);
-
-  const hasFilters = genderFilter !== 'all' || search.trim().length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -54,58 +109,31 @@ const PerfumerDetail = () => {
           {t('perfumers.title')}
         </button>
 
-        <div className="mb-6 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
+        <div className="mb-10 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
           <h1 className="font-display text-3xl md:text-4xl font-medium mb-2">{decodedName}</h1>
           {!isLoading && (
             <p className="text-muted-foreground text-sm">
-              {hasFilters
-                ? <>{filtered.length} <span className="text-muted-foreground/60">/ {perfumes.length}</span> {t('perfumers.fragrances')}</>
-                : <>{perfumes.length} {perfumes.length === 1 ? t('perfumers.fragrance') : t('perfumers.fragrances')}</>
-              }
+              {brands.length} {brands.length === 1 ? t('perfumers.brand') : t('perfumers.brands')}
             </p>
           )}
         </div>
 
-        {!isLoading && perfumes.length > 0 && (
-          <div className="flex flex-col items-center gap-4 mb-8">
-            <GenderFilterButtons value={genderFilter} onChange={setGenderFilter} />
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('brands.filterPerfumes')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-9"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-24 text-muted-foreground">
-            {hasFilters ? t('search.noResults') : t('common.notFound')}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-            {filtered.map((perfume, index) => (
-              <PerfumeCard key={perfume.id} perfume={perfume} index={index} />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {isLoading
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
+              ))
+            : brands.map((brand, index) => (
+                <BrandCard
+                  key={brand.name}
+                  perfumer={decodedName}
+                  name={brand.name}
+                  count={brand.count}
+                  imageUrl={brand.imageUrl}
+                  index={index}
+                />
+              ))}
+        </div>
       </main>
 
       <Footer />

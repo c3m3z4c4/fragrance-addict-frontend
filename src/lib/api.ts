@@ -433,6 +433,45 @@ export async function fetchPerfumers(): Promise<PerfumerInfo[]> {
     }
 }
 
+// Get brands a perfumer has collaborated with
+export async function fetchPerfumerBrands(name: string): Promise<PerfumerInfo[]> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumes/perfumer/${encodeURIComponent(name)}/brands`
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        const raw = data.data ?? (Array.isArray(data) ? data : []);
+        return raw.map((item: any) => ({
+            name: item.name ?? item,
+            count: item.count ?? 0,
+            imageUrl: item.imageUrl ?? item.image_url ?? null,
+        }));
+    } catch (error) {
+        console.error('❌ Fetch perfumer brands error:', error);
+        return [];
+    }
+}
+
+// Get perfumes by perfumer + brand
+export async function fetchPerfumesByPerfumerAndBrand(
+    perfumer: string,
+    brand: string
+): Promise<APIPerfume[]> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumes/perfumer/${encodeURIComponent(perfumer)}/brand/${encodeURIComponent(brand)}`
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        const results: any[] = data.data ?? (Array.isArray(data) ? data : []);
+        return results.map((item) => deepSanitizePerfume(item));
+    } catch (error) {
+        console.error('❌ Fetch perfumer+brand perfumes error:', error);
+        return [];
+    }
+}
+
 export interface BrandInfo {
     name: string;
     count: number;

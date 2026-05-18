@@ -151,6 +151,8 @@ export const translations = {
         subtitle: 'Discover the artists behind the world\'s most iconic fragrances',
         fragrance: 'fragrance',
         fragrances: 'fragrances',
+        brand: 'brand',
+        brands: 'brands',
       },
       // Filters
       filter: {
@@ -398,6 +400,8 @@ export const translations = {
         subtitle: 'Descubre a los artistas detrás de las fragancias más icónicas del mundo',
         fragrance: 'fragancia',
         fragrances: 'fragancias',
+        brand: 'marca',
+        brands: 'marcas',
       },
       // Filters
       filter: {
