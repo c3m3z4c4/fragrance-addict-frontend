@@ -98,9 +98,9 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Scrollable single-row tab bar — works on all screen sizes */}
-          <div className="relative">
-            <TabsList className="flex w-max min-w-full h-auto gap-0.5 overflow-x-auto scrollbar-hide rounded-lg p-1">
+          {/* Scrollable single-row tab bar */}
+          <div className="relative overflow-x-auto scrollbar-hide rounded-lg">
+            <TabsList className="flex w-max h-auto gap-0.5 rounded-lg p-1">
               {([
                 { value: 'perfumes',   icon: <Database className="h-3.5 w-3.5" />,   label: 'Perfumes' },
                 { value: 'scraper',    icon: <Sparkles className="h-3.5 w-3.5" />,   label: 'Scraper' },
@@ -129,8 +129,6 @@ export default function Admin() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            {/* Fade hint on right edge to signal scroll */}
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-muted to-transparent rounded-r-lg" />
           </div>
 
           <TabsContent value="perfumes" className="animate-fade-in">
