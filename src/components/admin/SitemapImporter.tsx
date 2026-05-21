@@ -16,6 +16,7 @@ import {
   type CatalogDiscovery,
 } from '@/lib/api';
 import { BulkBrandImporter } from './BulkBrandImporter';
+import { AlgoliaImporter } from './AlgoliaImporter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -343,6 +344,9 @@ export function SitemapImporter() {
 
   return (
     <div className="space-y-6">
+
+      {/* Algolia-based importer — no Cloudflare blocks */}
+      <AlgoliaImporter />
 
       {/* Bulk Brand Importer */}
       <BulkBrandImporter />

@@ -417,7 +417,7 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
 
 import { getAuthToken } from '@/contexts/AuthContext';
 
-const getAuthHeader = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+export const getAuthHeader = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
 // Scrape a perfume from URL
 export async function scrapePerfume(
@@ -562,6 +562,16 @@ export interface QueueStatus {
     etaMs?: number | null;
     catalogDiscovery?: CatalogDiscovery;
     brandImportJob?: BrandImportJob;
+    algoliaJob?: {
+        active: boolean;
+        phase: 'brands' | 'perfumes' | 'enqueueing' | 'done' | 'error' | null;
+        brandsDiscovered: number;
+        perfumesDiscovered: number;
+        urlsQueued: number;
+        startedAt: string | null;
+        finishedAt: string | null;
+        error: string | null;
+    };
 }
 
 // Fetch URLs from Fragrantica sitemap or brand page
