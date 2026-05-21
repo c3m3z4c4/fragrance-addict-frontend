@@ -9,53 +9,17 @@
  */
 const getApiBaseUrl = (): string => {
     try {
-        // Prioridad:
-        // 1. Variable de entorno VITE_API_URL (recomendado para desarrollo/producción)
-        if (import.meta.env.VITE_API_URL) {
-            console.log(
-                '📍 Using API_URL from environment:',
-                import.meta.env.VITE_API_URL
-            );
-            return import.meta.env.VITE_API_URL;
-        }
+        if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
 
-        // 2. Si está en localhost/127.0.0.1 (desarrollo local en la misma máquina)
         if (typeof window !== 'undefined') {
             const hostname = window.location.hostname;
-
-            // Desarrollo local - mismo servidor
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                console.log(
-                    '📍 Development mode detected (localhost), using http://' +
-                        hostname +
-                        ':3000'
-                );
-                return `http://${hostname}:3000`;
-            }
-
-            // Red local/interna - usar IP con puerto 3000
-            // (e.g., 192.168.x.x, 172.16.x.x, 10.x.x.x)
-            if (/^(192\.168|172\.(1[6-9]|2[0-9]|3[01])|10\.)/.test(hostname)) {
-                console.log(
-                    '📍 Local network detected, using http://' +
-                        hostname +
-                        ':3000'
-                );
-                return `http://${hostname}:3000`;
-            }
+            if (hostname === 'localhost' || hostname === '127.0.0.1') return `http://${hostname}:3000`;
+            if (/^(192\.168|172\.(1[6-9]|2[0-9]|3[01])|10\.)/.test(hostname)) return `http://${hostname}:3000`;
         }
 
-        // 3. URL pública/producción — configura VITE_API_URL en el build
-        const fallback = 'http://localhost:3000';
-        console.warn('⚠️ VITE_API_URL not set, falling back to:', fallback);
-        return fallback;
-    } catch (error) {
-        console.error('❌ Error determining API_BASE_URL:', error);
-        // Fallback seguro - intentar obtener hostname
-        if (typeof window !== 'undefined') {
-            return `http://${window.location.hostname}:3000`;
-        }
         return 'http://localhost:3000';
+    } catch {
+        return typeof window !== 'undefined' ? `http://${window.location.hostname}:3000` : 'http://localhost:3000';
     }
 };
 
@@ -123,13 +87,7 @@ export async function fetchPerfumes(
             `${API_BASE_URL}/api/perfumes?page=${page}&limit=${limit}`
         );
         if (!response.ok) {
-            console.error('Failed to fetch perfumes:', response.status);
-            return {
-                perfumes: [],
-                total: 0,
-                page,
-                limit,
-            };
+            return { perfumes: [], total: 0, page, limit };
         }
         const data = await response.json();
 
@@ -155,14 +113,8 @@ export async function fetchPerfumes(
             page: data.pagination?.page || data.page || page,
             limit: data.pagination?.limit || data.limit || limit,
         };
-    } catch (error) {
-        console.error('❌ Fetch perfumes error:', error);
-        return {
-            perfumes: [],
-            total: 0,
-            page,
-            limit,
-        };
+    } catch {
+        return { perfumes: [], total: 0, page, limit };
     }
 }
 
@@ -224,71 +176,22 @@ function deepSanitizePerfume(item: any): APIPerfume {
 // Search perfumes by query
 export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
     try {
-        console.log('🔍 Searching for:', query);
-        console.log(
-            '📍 API URL:',
-            `${API_BASE_URL}/api/perfumes/search?q=${encodeURIComponent(query)}`
-        );
-
         const response = await fetch(
             `${API_BASE_URL}/api/perfumes/search?q=${encodeURIComponent(query)}`
         );
-
-        console.log('Response status:', response.status, response.statusText);
-
-        if (!response.ok) {
-            console.error(
-                `Search failed: ${response.status} ${response.statusText}`
-            );
-            return [];
-        }
+        if (!response.ok) return [];
 
         const data = await response.json();
-        console.log('Raw response data:', data);
-
-        // Handle both response formats
         let results: APIPerfume[] = [];
 
-        if (data.data && Array.isArray(data.data)) {
-            console.log(
-                '✅ Returning data.data with',
-                data.data.length,
-                'results'
-            );
-            results = data.data;
-        } else if (data.perfumes && Array.isArray(data.perfumes)) {
-            console.log(
-                '✅ Returning data.perfumes with',
-                data.perfumes.length,
-                'results'
-            );
-            results = data.perfumes;
-        } else if (Array.isArray(data)) {
-            console.log('✅ Returning array data with', data.length, 'results');
-            results = data;
-        } else {
-            console.warn(
-                '❌ No valid data format found, returning empty array'
-            );
-            results = [];
-        }
+        if (data.data && Array.isArray(data.data)) results = data.data;
+        else if (data.perfumes && Array.isArray(data.perfumes)) results = data.perfumes;
+        else if (Array.isArray(data)) results = data;
 
-        // Validate and sanitize results using deepSanitizePerfume
-        const validated = results
-            .filter(
-                (item) =>
-                    item &&
-                    typeof item === 'object' &&
-                    (item as any).id &&
-                    (item as any).name &&
-                    (item as any).brand
-            )
-            .map((item: any) => deepSanitizePerfume(item));
-        console.log('✅ Validated and sanitized', validated.length, 'perfumes');
-        return validated as APIPerfume[];
-    } catch (error) {
-        console.error('❌ Search error:', error);
-        // Return empty array instead of throwing to prevent React crashes
+        return results
+            .filter((item) => item && typeof item === 'object' && (item as any).id && (item as any).name && (item as any).brand)
+            .map((item: any) => deepSanitizePerfume(item)) as APIPerfume[];
+    } catch {
         return [];
     }
 }
@@ -296,67 +199,27 @@ export async function searchPerfumes(query: string): Promise<APIPerfume[]> {
 // Get perfume by ID
 export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
     try {
-        console.log('🔍 Fetching perfume by ID:', id);
         const response = await fetch(`${API_BASE_URL}/api/perfumes/${id}`);
-        console.log('Response status:', response.status);
+        if (!response.ok) return null;
 
-        if (!response.ok) {
-            console.error('Perfume not found:', id, response.status);
-            return null;
-        }
         const data = await response.json();
-        console.log('Raw perfume data:', data);
-        console.log('Data.data contents:', data.data);
-        console.log(
-            'Data.data keys:',
-            data.data ? Object.keys(data.data) : 'N/A'
-        );
-
-        // Handle both response formats - check for double nesting
         let perfume: any = null;
 
-        // Check if data.data.data exists (double nesting)
-        if (
-            data.data?.data &&
-            typeof data.data.data === 'object' &&
-            data.data.data.id
-        ) {
-            console.log('Using data.data.data format (double nested)');
+        if (data.data?.data && typeof data.data.data === 'object' && data.data.data.id) {
             perfume = data.data.data;
         } else if (data.data && typeof data.data === 'object' && data.data.id) {
-            console.log('Using data.data format');
             perfume = data.data;
         } else if (data && typeof data === 'object' && data.id) {
-            console.log('Using direct object format');
             perfume = data;
         } else if (data && typeof data === 'object' && !data.success) {
-            console.log('Using fallback object format');
             perfume = data;
         } else {
-            console.warn('❌ Could not extract perfume from response');
-            console.log(
-                'Data type:',
-                typeof data,
-                'Keys:',
-                Object.keys(data || {})
-            );
             return null;
         }
 
-        if (!perfume || !perfume.id || !perfume.name) {
-            console.warn('❌ Perfume missing required fields:', {
-                id: !!perfume?.id,
-                name: !!perfume?.name,
-                brand: !!perfume?.brand,
-            });
-            return null;
-        }
-
-        const sanitized = deepSanitizePerfume(perfume);
-        console.log('✅ Sanitized perfume:', sanitized.id, sanitized.name);
-        return sanitized;
-    } catch (error) {
-        console.error('❌ Fetch perfume by ID error:', error);
+        if (!perfume?.id || !perfume?.name) return null;
+        return deepSanitizePerfume(perfume);
+    } catch {
         return null;
     }
 }
@@ -369,10 +232,7 @@ export async function fetchPerfumesByBrand(
         const response = await fetch(
             `${API_BASE_URL}/api/perfumes/brand/${encodeURIComponent(brand)}`
         );
-        if (!response.ok) {
-            console.error('Failed to fetch brand perfumes:', brand);
-            return [];
-        }
+        if (!response.ok) return [];
         const data = await response.json();
 
         // Handle both response formats
@@ -387,7 +247,6 @@ export async function fetchPerfumesByBrand(
 
         return results.map((item) => deepSanitizePerfume(item));
     } catch (error) {
-        console.error('❌ Fetch brand perfumes error:', error);
         return [];
     }
 }
@@ -403,7 +262,6 @@ export async function fetchPerfumesByPerfumer(name: string): Promise<APIPerfume[
         const results: any[] = data.data ?? data.perfumes ?? (Array.isArray(data) ? data : []);
         return results.map((item) => deepSanitizePerfume(item));
     } catch (error) {
-        console.error('❌ Fetch perfumer perfumes error:', error);
         return [];
     }
 }
@@ -434,7 +292,6 @@ export async function fetchPerfumers(): Promise<PerfumerInfo[]> {
             verified: item.verified ?? false,
         }));
     } catch (error) {
-        console.error('❌ Fetch perfumers error:', error);
         return [];
     }
 }
@@ -488,7 +345,6 @@ export async function fetchPerfumerBrands(name: string): Promise<PerfumerInfo[]>
             imageUrl: item.imageUrl ?? item.image_url ?? null,
         }));
     } catch (error) {
-        console.error('❌ Fetch perfumer brands error:', error);
         return [];
     }
 }
@@ -507,7 +363,6 @@ export async function fetchPerfumesByPerfumerAndBrand(
         const results: any[] = data.data ?? (Array.isArray(data) ? data : []);
         return results.map((item) => deepSanitizePerfume(item));
     } catch (error) {
-        console.error('❌ Fetch perfumer+brand perfumes error:', error);
         return [];
     }
 }
@@ -523,7 +378,6 @@ export async function fetchBrands(): Promise<BrandInfo[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/api/perfumes/brands`);
         if (!response.ok) {
-            console.error('Failed to fetch brands');
             return [];
         }
         const data = await response.json();
@@ -536,7 +390,6 @@ export async function fetchBrands(): Promise<BrandInfo[]> {
                 : { name: item.name ?? item, count: item.count ?? 0, imageUrl: item.imageUrl ?? item.image_url ?? null }
         );
     } catch (error) {
-        console.error('❌ Fetch brands error:', error);
         return [];
     }
 }
@@ -546,7 +399,6 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
     try {
         const response = await fetch(`${API_BASE_URL}/api/perfumes/stats`);
         if (!response.ok) {
-            console.error('Failed to fetch stats');
             return { total: 0, brands: 0 };
         }
         const raw = await response.json();
@@ -557,7 +409,6 @@ export async function fetchStats(): Promise<{ total: number; brands: number }> {
             brands: d.totalBrands ?? d.brands ?? 0,
         };
     } catch (error) {
-        console.error('❌ Fetch stats error:', error);
         return { total: 0, brands: 0 };
     }
 }
