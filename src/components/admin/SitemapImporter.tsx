@@ -15,6 +15,7 @@ import {
   type FullCatalogResult,
   type CatalogDiscovery,
 } from '@/lib/api';
+import { BulkBrandImporter } from './BulkBrandImporter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -342,6 +343,9 @@ export function SitemapImporter() {
 
   return (
     <div className="space-y-6">
+
+      {/* Bulk Brand Importer */}
+      <BulkBrandImporter />
 
       {/* Full Catalog Import Card */}
       <Card className="border-accent/30">

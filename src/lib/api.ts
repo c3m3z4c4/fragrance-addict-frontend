@@ -561,6 +561,7 @@ export interface QueueStatus {
     processingRatePerHour?: number | null;
     etaMs?: number | null;
     catalogDiscovery?: CatalogDiscovery;
+    brandImportJob?: BrandImportJob;
 }
 
 // Fetch URLs from Fragrantica sitemap or brand page
@@ -1427,6 +1428,47 @@ export async function uploadBrandLogosBulk(
     } catch (err: any) {
         return { success: false, total: 0, updated: 0, failed: 0, results: [], error: err?.message || 'No se pudo conectar con el servidor' };
     }
+}
+
+// ============= BULK BRAND IMPORT =============
+
+export interface BrandImportJob {
+    active: boolean;
+    paused: boolean;
+    brandsTotal: number;
+    brandsProcessed: number;
+    brandsSucceeded: number;
+    brandsFailed: number;
+    urlsQueued: number;
+    currentBrand: string | null;
+    results: Array<{ brand: string; total: number; queued: number; skipped: number; logoUrl?: boolean; error?: string }>;
+    startedAt: string | null;
+    finishedAt: string | null;
+}
+
+export async function startBulkBrandImport(brands: string[], limitPerBrand = 500): Promise<{ success: boolean; total?: number; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ brands, limitPerBrand }),
+    });
+    return res.json();
+}
+
+export async function pauseBulkBrandImport(): Promise<{ success: boolean; paused?: boolean }> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/bulk/pause`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+    });
+    return res.json();
+}
+
+export async function stopBulkBrandImport(): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE_URL}/api/scrape/brands/bulk/stop`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+    });
+    return res.json();
 }
 
 // ============= DATABASE BACKUP / RESTORE (new comprehensive API) =============
