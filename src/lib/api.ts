@@ -1406,6 +1406,26 @@ export interface FullCatalogResult {
     error?: string;
 }
 
+export interface SitemapUploadResult {
+    success: boolean;
+    filesProcessed?: number;
+    totalFound?: number;
+    newQueued?: number;
+    alreadyExist?: number;
+    error?: string;
+}
+
+export async function uploadSitemapFiles(files: File[]): Promise<SitemapUploadResult> {
+    const form = new FormData();
+    for (const f of files) form.append('sitemaps', f);
+    const res = await fetch(`${API_BASE_URL}/api/scrape/catalog/upload`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: form,
+    });
+    return res.json();
+}
+
 export async function importFullCatalog(autoStart = true): Promise<FullCatalogResult> {
     const res = await fetch(`${API_BASE_URL}/api/scrape/catalog/full`, {
         method: 'POST',

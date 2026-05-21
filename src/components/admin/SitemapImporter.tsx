@@ -10,6 +10,7 @@ import {
   retryFailedQueue,
   checkExistingUrls,
   importFullCatalog,
+  uploadSitemapFiles,
   type QueueStatus,
   type FullCatalogResult,
   type CatalogDiscovery,
@@ -38,6 +39,9 @@ import {
   Zap,
   Timer,
   MapPin,
+  Upload,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -156,6 +160,7 @@ export function SitemapImporter() {
   const [fetchedUrls, setFetchedUrls] = useState<string[]>([]);
   const [fullCatalogResult, setFullCatalogResult] = useState<FullCatalogResult | null>(null);
   const [showFullCatalogConfirm, setShowFullCatalogConfirm] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const queryClient = useQueryClient();
 
   // Adaptive polling: fast when active, slow when idle
@@ -280,6 +285,34 @@ export function SitemapImporter() {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: (files: File[]) => uploadSitemapFiles(files),
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: 'Sitemaps procesados',
+          description: `${result.newQueued?.toLocaleString()} URLs nuevas agregadas a la cola (${result.alreadyExist?.toLocaleString()} ya existían)`,
+        });
+        refetchStatus();
+      } else {
+        toast({ title: 'Error al procesar', description: result.error, variant: 'destructive' });
+      }
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const xmlFiles = Array.from(files).filter(f => f.name.endsWith('.xml') || f.type === 'text/xml' || f.type === 'application/xml');
+    if (xmlFiles.length === 0) {
+      toast({ title: 'Formato incorrecto', description: 'Solo se aceptan archivos .xml', variant: 'destructive' });
+      return;
+    }
+    uploadMutation.mutate(xmlFiles);
+  };
+
   const fullCatalogMutation = useMutation({
     mutationFn: () => importFullCatalog(true),
     onSuccess: (result) => {
@@ -388,6 +421,107 @@ export function SitemapImporter() {
               <Button size="sm" variant="ghost" onClick={() => setShowFullCatalogConfirm(false)} disabled={fullCatalogMutation.isPending}>
                 Cancelar
               </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Manual Sitemap Upload Card */}
+      <Card className="border-blue-500/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-blue-500" />
+            Cargar Sitemaps Manualmente
+            <span className="text-xs font-normal text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Recomendado</span>
+          </CardTitle>
+          <CardDescription>
+            Si el servidor no puede acceder a Fragrantica (bloqueado por Cloudflare), descarga los sitemaps desde tu navegador y súbelos aquí.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Step instructions */}
+          <div className="space-y-2 text-sm">
+            <p className="font-medium text-muted-foreground">Pasos:</p>
+            <ol className="space-y-1.5 text-muted-foreground list-none">
+              {[
+                { n: '1', text: 'Abre cada sitemap en tu navegador (links abajo)', },
+                { n: '2', text: 'Ctrl+S → guardar como archivo XML', },
+                { n: '3', text: 'Arrastra todos los archivos a la zona de abajo', },
+              ].map(({ n, text }) => (
+                <li key={n} className="flex items-start gap-2">
+                  <span className="shrink-0 h-5 w-5 rounded-full bg-blue-500/20 text-blue-600 text-xs flex items-center justify-center font-bold">{n}</span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* Sitemap links */}
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 13 }, (_, i) => i + 1).map(i => (
+              <a
+                key={i}
+                href={`https://www.fragrantica.com/sitemap_perfumes_${i}.xml`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-border hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <FileText className="h-3 w-3" />
+                sitemap_{i}.xml
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            ))}
+          </div>
+
+          {/* Drop zone */}
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
+              dragOver ? 'border-blue-500 bg-blue-500/10' : 'border-border hover:border-blue-500/40 hover:bg-muted/30',
+              uploadMutation.isPending && 'pointer-events-none opacity-60',
+            )}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+            onClick={() => document.getElementById('sitemap-file-input')?.click()}
+          >
+            <input
+              id="sitemap-file-input"
+              type="file"
+              multiple
+              accept=".xml,text/xml,application/xml"
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            {uploadMutation.isPending ? (
+              <div className="flex flex-col items-center gap-2 text-blue-500">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="text-sm font-medium">Procesando archivos…</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Upload className="h-8 w-8" />
+                <span className="text-sm font-medium">Arrastra los XML aquí o haz clic para seleccionar</span>
+                <span className="text-xs">Puedes subir varios archivos a la vez</span>
+              </div>
+            )}
+          </div>
+
+          {/* Upload result */}
+          {uploadMutation.isSuccess && uploadMutation.data?.success && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-xl font-bold">{uploadMutation.data.filesProcessed}</p>
+                <p className="text-xs text-muted-foreground">Archivos procesados</p>
+              </div>
+              <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                <p className="text-xl font-bold text-green-600">{uploadMutation.data.newQueued?.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Nuevas en cola</p>
+              </div>
+              <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <p className="text-xl font-bold text-amber-600">{uploadMutation.data.alreadyExist?.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Ya existían</p>
+              </div>
             </div>
           )}
         </CardContent>
