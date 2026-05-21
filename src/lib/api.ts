@@ -683,6 +683,19 @@ export async function clearCache(): Promise<{ success: boolean }> {
 
 // ============= SITEMAP & QUEUE FUNCTIONS =============
 
+export interface CatalogDiscovery {
+    active: boolean;
+    phase: 'reading_index' | 'reading_sitemaps' | 'enqueueing' | 'done' | 'error' | null;
+    currentSitemap: string | null;
+    sitemapsTotal: number;
+    sitemapsProcessed: number;
+    urlsFound: number;
+    urlsQueued: number;
+    startedAt: string | null;
+    finishedAt: string | null;
+    error: string | null;
+}
+
 export interface QueueStatus {
     processing: boolean;
     current: string | null;
@@ -694,6 +707,9 @@ export interface QueueStatus {
     failedThisSession?: number;
     startedAt: string | null;
     errors: Array<{ url: string; error: string; time: string }>;
+    processingRatePerHour?: number | null;
+    etaMs?: number | null;
+    catalogDiscovery?: CatalogDiscovery;
 }
 
 // Fetch URLs from Fragrantica sitemap or brand page

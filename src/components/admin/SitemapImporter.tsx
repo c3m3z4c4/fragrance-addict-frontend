@@ -12,6 +12,7 @@ import {
   importFullCatalog,
   type QueueStatus,
   type FullCatalogResult,
+  type CatalogDiscovery,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,6 @@ import { toast } from '@/hooks/use-toast';
 import {
   Loader2,
   Play,
-  Square,
   Trash2,
   Download,
   Clock,
@@ -35,6 +35,9 @@ import {
   TriangleAlert,
   RotateCcw,
   Pause,
+  Zap,
+  Timer,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +46,107 @@ interface UrlCheckResult {
   existingCount: number;
   newCount: number;
   newUrls: string[];
+}
+
+// Format milliseconds into a human-readable duration
+function formatDuration(ms: number): string {
+  const totalMinutes = Math.round(ms / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours < 24) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remainHours = hours % 24;
+  return remainHours > 0 ? `${days}d ${remainHours}h` : `${days}d`;
+}
+
+function formatEta(etaMs: number): string {
+  const eta = new Date(Date.now() + etaMs);
+  const durationStr = formatDuration(etaMs);
+  const dateStr = eta.toLocaleDateString('es-MX', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${durationStr} · termina ~${dateStr}`;
+}
+
+function DiscoveryProgressPanel({ discovery }: { discovery: CatalogDiscovery }) {
+  const phaseLabel: Record<string, string> = {
+    reading_index: 'Leyendo índice de sitemaps…',
+    reading_sitemaps: 'Extrayendo URLs de sitemaps…',
+    enqueueing: 'Agregando URLs a la cola…',
+    done: 'Descubrimiento completado',
+    error: 'Error en descubrimiento',
+  };
+
+  const isActive = discovery.active;
+  const isDone = discovery.phase === 'done';
+  const isError = discovery.phase === 'error';
+
+  const sitemapProgress =
+    discovery.sitemapsTotal > 0
+      ? (discovery.sitemapsProcessed / discovery.sitemapsTotal) * 100
+      : 0;
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg border p-4 space-y-3 text-sm',
+        isError
+          ? 'bg-destructive/10 border-destructive/30'
+          : isDone
+          ? 'bg-green-500/10 border-green-500/30'
+          : 'bg-accent/10 border-accent/30',
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 font-medium">
+        {isError ? (
+          <XCircle className="h-4 w-4 text-destructive shrink-0" />
+        ) : isDone ? (
+          <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+        ) : (
+          <Loader2 className="h-4 w-4 animate-spin text-accent shrink-0" />
+        )}
+        <span>{phaseLabel[discovery.phase ?? ''] ?? 'Procesando…'}</span>
+      </div>
+
+      {/* Sitemap progress bar */}
+      {discovery.sitemapsTotal > 0 && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Sitemaps</span>
+            <span>{discovery.sitemapsProcessed} / {discovery.sitemapsTotal}</span>
+          </div>
+          <Progress value={sitemapProgress} className="h-1.5" />
+        </div>
+      )}
+
+      {/* Stats row */}
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {discovery.urlsFound > 0 && (
+          <span className="flex items-center gap-1">
+            <Globe className="h-3 w-3" />
+            {discovery.urlsFound.toLocaleString()} URLs encontradas
+          </span>
+        )}
+        {discovery.currentSitemap && isActive && (
+          <span className="flex items-center gap-1 truncate">
+            <MapPin className="h-3 w-3 shrink-0" />
+            {discovery.currentSitemap}
+          </span>
+        )}
+        {discovery.urlsQueued > 0 && (
+          <span className="flex items-center gap-1 text-green-600">
+            <Plus className="h-3 w-3" />
+            {discovery.urlsQueued.toLocaleString()} nuevas en cola
+          </span>
+        )}
+      </div>
+
+      {/* Error message */}
+      {isError && discovery.error && (
+        <p className="text-xs text-destructive">{discovery.error}</p>
+      )}
+    </div>
+  );
 }
 
 export function SitemapImporter() {
@@ -54,53 +158,47 @@ export function SitemapImporter() {
   const [showFullCatalogConfirm, setShowFullCatalogConfirm] = useState(false);
   const queryClient = useQueryClient();
 
-  // Poll queue status every 10 seconds when processing (to avoid rate limiting)
+  // Adaptive polling: fast when active, slow when idle
   const { data: queueStatus, refetch: refetchStatus } = useQuery({
     queryKey: ['queue-status'],
     queryFn: getQueueStatus,
     refetchInterval: (query) => {
       const data = query.state.data as QueueStatus | undefined;
-      // Only poll when actively processing, use 10s interval to avoid rate limits
-      return data?.processing ? 10000 : false;
+      if (data?.processing) return 3000;          // 3s while scraping
+      if (data?.catalogDiscovery?.active) return 2000; // 2s during sitemap discovery
+      if ((data?.remaining ?? 0) > 0) return 15000;  // 15s when paused with items
+      return false;                                // idle — no polling
     },
     retry: 1,
     retryDelay: 5000,
-    staleTime: 5000,
+    staleTime: 2000,
   });
 
-  // Refetch when queue starts/stops
+  // Invalidate catalog queries when scraping
   useEffect(() => {
     if (queueStatus?.processing) {
       const interval = setInterval(() => {
         queryClient.invalidateQueries({ queryKey: ['admin-perfumes'] });
         queryClient.invalidateQueries({ queryKey: ['perfumes'] });
-      }, 10000);
+      }, 15000);
       return () => clearInterval(interval);
     }
   }, [queueStatus?.processing, queryClient]);
 
-  // Fetch URLs and check which ones already exist
   const fetchUrlsMutation = useMutation({
     mutationFn: async () => {
-      // First, fetch URLs from Fragrantica
       const result = await fetchSitemapUrls(brand || undefined, parseInt(limit));
       if (!result.success || !result.urls) {
         throw new Error(result.error || 'Failed to fetch URLs');
       }
-      
-      // Check if we got any URLs
       if (result.urls.length === 0) {
         throw new Error('No URLs found. Try a different brand name or check spelling.');
       }
-      
       setFetchedUrls(result.urls);
-      
-      // Then check which ones already exist
       const checkResult = await checkExistingUrls(result.urls);
       if (!checkResult.success) {
         throw new Error(checkResult.error || 'Failed to check existing URLs');
       }
-      
       return checkResult;
     },
     onSuccess: (result) => {
@@ -108,12 +206,11 @@ export function SitemapImporter() {
         total: result.total || 0,
         existingCount: result.existingCount || 0,
         newCount: result.newCount || 0,
-        newUrls: result.newUrls || []
+        newUrls: result.newUrls || [],
       });
-      
-      toast({ 
-        title: 'URLs Checked', 
-        description: `Found ${result.newCount} new perfumes (${result.existingCount} already exist)` 
+      toast({
+        title: 'URLs verificadas',
+        description: `${result.newCount} nuevas fragancias (${result.existingCount} ya existen)`,
       });
     },
     onError: (error: Error) => {
@@ -121,15 +218,11 @@ export function SitemapImporter() {
     },
   });
 
-  // Add only new URLs to the queue
   const addToQueueMutation = useMutation({
     mutationFn: () => addToQueue(urlCheckResult?.newUrls || []),
     onSuccess: (result) => {
       if (result.success) {
-        toast({ 
-          title: 'Added to Queue', 
-          description: `${result.added} URLs added` 
-        });
+        toast({ title: 'Agregadas a la cola', description: `${result.added} URLs agregadas` });
         setUrlCheckResult(null);
         setFetchedUrls([]);
         refetchStatus();
@@ -144,7 +237,7 @@ export function SitemapImporter() {
     mutationFn: startQueue,
     onSuccess: (result) => {
       if (result.success) {
-        toast({ title: 'Queue Started', description: 'Processing perfumes in background' });
+        toast({ title: 'Cola iniciada', description: 'Procesando fragancias en segundo plano' });
         refetchStatus();
       } else {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
@@ -155,7 +248,7 @@ export function SitemapImporter() {
   const stopMutation = useMutation({
     mutationFn: stopQueue,
     onSuccess: () => {
-      toast({ title: 'Queue Stopped' });
+      toast({ title: 'Cola pausada', description: 'Puedes reanudar en cualquier momento' });
       refetchStatus();
     },
   });
@@ -163,7 +256,7 @@ export function SitemapImporter() {
   const clearMutation = useMutation({
     mutationFn: () => clearQueue('pending'),
     onSuccess: (res) => {
-      toast({ title: 'Pending queue cleared', description: `${res.deleted ?? 0} entries removed` });
+      toast({ title: 'Cola pendiente limpiada', description: `${res.deleted ?? 0} entradas eliminadas` });
       refetchStatus();
     },
   });
@@ -171,7 +264,7 @@ export function SitemapImporter() {
   const clearFailedMutation = useMutation({
     mutationFn: () => clearQueue('failed'),
     onSuccess: (res) => {
-      toast({ title: 'Failed entries cleared', description: `${res.deleted ?? 0} entries removed` });
+      toast({ title: 'Entradas fallidas eliminadas', description: `${res.deleted ?? 0} entradas eliminadas` });
       refetchStatus();
     },
   });
@@ -179,7 +272,7 @@ export function SitemapImporter() {
   const retryFailedMutation = useMutation({
     mutationFn: retryFailedQueue,
     onSuccess: (res) => {
-      toast({ title: 'Retrying failed URLs', description: `${res.retried} URLs moved back to pending` });
+      toast({ title: 'Reintentando URLs fallidas', description: `${res.retried} URLs movidas a pendiente` });
       refetchStatus();
     },
     onError: (err: Error) => {
@@ -192,23 +285,13 @@ export function SitemapImporter() {
     onSuccess: (result) => {
       setShowFullCatalogConfirm(false);
       if (result.success) {
-        if (result.status === 'discovering') {
-          toast({
-            title: 'Discovery Started',
-            description: 'Sitemap discovery is running in the background. URLs will appear in the queue below in a few minutes.',
-          });
-          // Start polling queue status so the user can see URLs being added
-          setTimeout(() => refetchStatus(), 5000);
-        } else {
-          setFullCatalogResult(result);
-          refetchStatus();
-          toast({
-            title: 'Full Catalog Import Started',
-            description: `${result.newQueued.toLocaleString()} new perfumes queued from ${result.sitemapsDiscovered} sitemap files`,
-          });
-        }
+        toast({
+          title: 'Descubrimiento iniciado',
+          description: 'Leyendo sitemaps de Fragrantica en segundo plano. Las URLs aparecerán en la cola en minutos.',
+        });
+        setTimeout(() => refetchStatus(), 2000);
       } else {
-        toast({ title: 'Import Failed', description: result.error || 'Could not fetch sitemaps', variant: 'destructive' });
+        toast({ title: 'Error de importación', description: result.error || 'No se pudieron obtener los sitemaps', variant: 'destructive' });
       }
     },
     onError: (error: Error) => {
@@ -217,9 +300,12 @@ export function SitemapImporter() {
     },
   });
 
-  const progress = queueStatus?.total 
-    ? ((queueStatus.processed + queueStatus.failed) / queueStatus.total) * 100 
+  const progress = queueStatus?.total
+    ? ((queueStatus.processed + queueStatus.failed) / queueStatus.total) * 100
     : 0;
+
+  const discovery = queueStatus?.catalogDiscovery;
+  const showDiscovery = discovery && (discovery.active || discovery.phase === 'done' || discovery.phase === 'error');
 
   return (
     <div className="space-y-6">
@@ -229,10 +315,10 @@ export function SitemapImporter() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-accent" />
-            Full Catalog Import
+            Importación Completa del Catálogo
           </CardTitle>
           <CardDescription>
-            Import all ~123,000 perfumes from Fragrantica by reading its public sitemaps. Already-scraped perfumes are skipped automatically.
+            Importa ~123,000 fragancias de Fragrantica leyendo sus sitemaps públicos. Las ya importadas se omiten automáticamente.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -240,37 +326,35 @@ export function SitemapImporter() {
           <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm">
             <TriangleAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1 text-muted-foreground">
-              <p><strong className="text-foreground">Time estimate:</strong> ~123K perfumes × 15 s = <strong className="text-foreground">~21 days</strong> of continuous processing at Fragrantica's safe rate limit.</p>
-              <p>The queue runs in the backend — you can safely close this page. You can also pause and resume at any time.</p>
+              <p>
+                <strong className="text-foreground">Estimado:</strong> ~123K fragancias × 15 s ={' '}
+                <strong className="text-foreground">~21 días</strong> de procesamiento continuo.
+              </p>
+              <p>La cola corre en el backend — puedes cerrar esta página, pausar y reanudar en cualquier momento.</p>
             </div>
           </div>
 
-          {/* Discovery in progress */}
-          {fullCatalogMutation.isSuccess && fullCatalogMutation.data?.status === 'discovering' && (
-            <div className="flex items-center gap-2 p-3 bg-accent/10 border border-accent/20 rounded-lg text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin text-accent shrink-0" />
-              <span>Discovery in progress — URLs are being added to the queue below. This may take a few minutes.</span>
-            </div>
-          )}
+          {/* Discovery progress panel */}
+          {showDiscovery && <DiscoveryProgressPanel discovery={discovery!} />}
 
-          {/* Result after import */}
-          {fullCatalogResult && (
+          {/* Result stats after discovery */}
+          {fullCatalogResult && fullCatalogResult.status !== 'discovering' && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="text-center p-3 bg-muted/50 rounded-lg">
                 <p className="text-xl font-bold">{fullCatalogResult.sitemapsDiscovered}</p>
-                <p className="text-xs text-muted-foreground">Sitemaps read</p>
+                <p className="text-xs text-muted-foreground">Sitemaps leídos</p>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded-lg">
                 <p className="text-xl font-bold">{fullCatalogResult.totalFound.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Total found</p>
+                <p className="text-xs text-muted-foreground">Total encontradas</p>
               </div>
               <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                 <p className="text-xl font-bold text-green-600">{fullCatalogResult.newQueued.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">New queued</p>
+                <p className="text-xs text-muted-foreground">Nuevas en cola</p>
               </div>
               <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
                 <p className="text-xl font-bold text-amber-600">{fullCatalogResult.alreadyExist.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Already exist</p>
+                <p className="text-xs text-muted-foreground">Ya existían</p>
               </div>
             </div>
           )}
@@ -281,14 +365,14 @@ export function SitemapImporter() {
               variant="outline"
               className="border-accent/40 hover:border-accent"
               onClick={() => setShowFullCatalogConfirm(true)}
-              disabled={fullCatalogMutation.isPending}
+              disabled={fullCatalogMutation.isPending || discovery?.active}
             >
               <Globe className="h-4 w-4 mr-2" />
-              Import Full Fragrantica Catalog
+              {discovery?.active ? 'Descubrimiento en curso…' : 'Importar catálogo completo de Fragrantica'}
             </Button>
           ) : (
             <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-sm flex-1">This will queue tens of thousands of URLs. Confirm?</p>
+              <p className="text-sm flex-1">Esto pondrá decenas de miles de URLs en cola. ¿Confirmar?</p>
               <Button
                 size="sm"
                 variant="destructive"
@@ -296,13 +380,13 @@ export function SitemapImporter() {
                 disabled={fullCatalogMutation.isPending}
               >
                 {fullCatalogMutation.isPending ? (
-                  <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Reading sitemaps…</>
+                  <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Iniciando…</>
                 ) : (
-                  'Yes, import all'
+                  'Sí, importar todo'
                 )}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setShowFullCatalogConfirm(false)} disabled={fullCatalogMutation.isPending}>
-                Cancel
+                Cancelar
               </Button>
             </div>
           )}
@@ -314,28 +398,26 @@ export function SitemapImporter() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Import from Fragrantica
+            Importar desde Fragrantica
           </CardTitle>
           <CardDescription>
-            Fetch perfume URLs from Fragrantica by brand or sitemap
+            Obtén URLs de fragancias por marca o sitemap
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="text-sm font-medium mb-1 block">Brand (optional)</label>
+              <label className="text-sm font-medium mb-1 block">Marca (opcional)</label>
               <Input
-                placeholder="e.g. Dior, Chanel, Tom Ford"
+                placeholder="ej. Dior, Chanel, Tom Ford"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 disabled={fetchUrlsMutation.isPending}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Leave empty to fetch from sitemap
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Dejar vacío para usar sitemap</p>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Limit</label>
+              <label className="text-sm font-medium mb-1 block">Límite</label>
               <Input
                 type="number"
                 min="10"
@@ -357,62 +439,56 @@ export function SitemapImporter() {
               >
                 {fetchUrlsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 <Search className="h-4 w-4 mr-2" />
-                Check URLs
+                Verificar URLs
               </Button>
             </div>
           </div>
 
-          {/* URL Check Results Preview */}
           {urlCheckResult && (
             <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium flex items-center gap-2">
                   <Database className="h-4 w-4" />
-                  URL Verification Results
+                  Resultados de verificación
                 </h4>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setUrlCheckResult(null);
-                    setFetchedUrls([]);
-                  }}
+                  onClick={() => { setUrlCheckResult(null); setFetchedUrls([]); }}
                 >
                   <XCircle className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-background rounded-lg border">
                   <p className="text-2xl font-bold">{urlCheckResult.total}</p>
-                  <p className="text-xs text-muted-foreground">Total Found</p>
+                  <p className="text-xs text-muted-foreground">Total encontradas</p>
                 </div>
                 <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                   <p className="text-2xl font-bold text-green-600">{urlCheckResult.newCount}</p>
-                  <p className="text-xs text-muted-foreground">New Perfumes</p>
+                  <p className="text-xs text-muted-foreground">Nuevas</p>
                 </div>
                 <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
                   <p className="text-2xl font-bold text-amber-600">{urlCheckResult.existingCount}</p>
-                  <p className="text-xs text-muted-foreground">Already Exist</p>
+                  <p className="text-xs text-muted-foreground">Ya existen</p>
                 </div>
               </div>
 
               {urlCheckResult.newCount > 0 ? (
-                <div className="flex items-center gap-3">
-                  <Button 
-                    onClick={() => addToQueueMutation.mutate()}
-                    disabled={addToQueueMutation.isPending}
-                    className="flex-1"
-                  >
-                    {addToQueueMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add {urlCheckResult.newCount} New URLs to Queue
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => addToQueueMutation.mutate()}
+                  disabled={addToQueueMutation.isPending}
+                  className="w-full"
+                >
+                  {addToQueueMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar {urlCheckResult.newCount} URLs nuevas a la cola
+                </Button>
               ) : (
                 <div className="flex items-center gap-2 text-amber-600 bg-amber-500/10 p-3 rounded-lg">
                   <CheckCircle2 className="h-5 w-5" />
-                  <span className="text-sm">All perfumes from this brand are already in your database!</span>
+                  <span className="text-sm">¡Todas las fragancias de esta marca ya están en tu base de datos!</span>
                 </div>
               )}
             </div>
@@ -426,67 +502,97 @@ export function SitemapImporter() {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Scraping Queue
+              Cola de Scraping
             </span>
             <div className="flex items-center gap-2">
               {queueStatus?.processing ? (
-                <span className="flex items-center gap-1 text-sm text-green-500">
+                <span className="flex items-center gap-1.5 text-sm text-green-500 font-medium">
                   <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                  Processing
+                  Procesando
                 </span>
               ) : queueStatus?.remaining ? (
-                <span className="text-sm text-muted-foreground">Paused</span>
+                <span className="flex items-center gap-1.5 text-sm text-amber-500">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  Pausada
+                </span>
               ) : (
-                <span className="text-sm text-muted-foreground">Idle</span>
+                <span className="text-sm text-muted-foreground">Inactiva</span>
               )}
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Progress */}
+
+          {/* Progress bar */}
           {queueStatus && queueStatus.total > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span>Progress</span>
-                <span>{queueStatus.processed + queueStatus.failed} / {queueStatus.total}</span>
+                <span className="text-muted-foreground">Progreso</span>
+                <span className="font-medium tabular-nums">
+                  {(queueStatus.processed + queueStatus.failed).toLocaleString()} / {queueStatus.total.toLocaleString()}
+                  <span className="text-muted-foreground ml-1.5">({progress.toFixed(1)}%)</span>
+                </span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={progress} className="h-2.5" />
             </div>
           )}
 
-          {/* Stats Grid — counts come from DB, survive restarts */}
-          <div className="grid grid-cols-4 gap-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-3">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold">{queueStatus?.remaining || 0}</p>
-              <p className="text-xs text-muted-foreground">Pending</p>
+              <p className="text-2xl font-bold tabular-nums">{(queueStatus?.remaining || 0).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Pendientes</p>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-lg">
-              <p className="text-2xl font-bold text-green-500">{queueStatus?.processed || 0}</p>
-              <p className="text-xs text-muted-foreground">Done</p>
+              <p className="text-2xl font-bold text-green-500 tabular-nums">{(queueStatus?.processed || 0).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Completadas</p>
             </div>
             <div className="text-center p-3 bg-destructive/10 rounded-lg">
-              <p className="text-2xl font-bold text-destructive">{queueStatus?.failed || 0}</p>
-              <p className="text-xs text-muted-foreground">Failed</p>
+              <p className="text-2xl font-bold text-destructive tabular-nums">{(queueStatus?.failed || 0).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Fallidas</p>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold">{queueStatus?.total || 0}</p>
+              <p className="text-2xl font-bold tabular-nums">{(queueStatus?.total || 0).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">Total</p>
             </div>
           </div>
 
-          {/* Current Processing */}
-          {queueStatus?.current && (
-            <div className="p-3 bg-accent/10 rounded-lg flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-accent" />
-              <span className="text-sm truncate">Scraping: {queueStatus.current}</span>
+          {/* Performance metrics row */}
+          {queueStatus?.processing && (
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground bg-muted/30 rounded-lg px-4 py-3">
+              {/* Processing rate */}
+              {queueStatus.processingRatePerHour != null && queueStatus.processingRatePerHour > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-accent" />
+                  <strong className="text-foreground">{queueStatus.processingRatePerHour.toLocaleString()}</strong> fragancias/hora
+                </span>
+              )}
+              {/* ETA */}
+              {queueStatus.etaMs != null && queueStatus.etaMs > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Timer className="h-3.5 w-3.5 text-accent" />
+                  {formatEta(queueStatus.etaMs)}
+                </span>
+              )}
+              {/* Session count */}
+              {(queueStatus.processedThisSession ?? 0) > 0 && (
+                <span className="flex items-center gap-1.5 ml-auto">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  Esta sesión: <strong className="text-foreground">{queueStatus.processedThisSession}</strong> procesadas
+                  {(queueStatus.failedThisSession ?? 0) > 0 && (
+                    <>, <span className="text-destructive">{queueStatus.failedThisSession}</span> fallidas</>
+                  )}
+                </span>
+              )}
             </div>
           )}
 
-          {/* Session stats (resets each time you hit Start) */}
-          {queueStatus?.processing && (queueStatus.processedThisSession ?? 0) > 0 && (
-            <p className="text-xs text-muted-foreground">
-              This session: {queueStatus.processedThisSession} processed · {queueStatus.failedThisSession} failed
-            </p>
+          {/* Current URL */}
+          {queueStatus?.current && (
+            <div className="p-3 bg-accent/10 rounded-lg flex items-center gap-2 overflow-hidden">
+              <Loader2 className="h-4 w-4 animate-spin text-accent shrink-0" />
+              <span className="text-sm truncate text-muted-foreground">{queueStatus.current}</span>
+            </div>
           )}
 
           {/* Controls */}
@@ -498,7 +604,9 @@ export function SitemapImporter() {
                 className="gap-2"
               >
                 {startMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                {queueStatus?.remaining ? `Resume (${queueStatus.remaining.toLocaleString()} pending)` : 'Start'}
+                {queueStatus?.remaining
+                  ? `Reanudar (${queueStatus.remaining.toLocaleString()} pendientes)`
+                  : 'Iniciar'}
               </Button>
             ) : (
               <Button
@@ -508,11 +616,10 @@ export function SitemapImporter() {
                 className="gap-2"
               >
                 <Pause className="h-4 w-4" />
-                Pause
+                Pausar
               </Button>
             )}
 
-            {/* Retry failed */}
             {(queueStatus?.failed ?? 0) > 0 && !queueStatus?.processing && (
               <Button
                 variant="outline"
@@ -521,11 +628,10 @@ export function SitemapImporter() {
                 className="gap-2"
               >
                 {retryFailedMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                Retry {queueStatus!.failed} Failed
+                Reintentar {queueStatus!.failed.toLocaleString()} fallidas
               </Button>
             )}
 
-            {/* Clear pending */}
             <Button
               variant="outline"
               onClick={() => clearMutation.mutate()}
@@ -533,11 +639,10 @@ export function SitemapImporter() {
               className="gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Clear Pending
+              Limpiar pendientes
             </Button>
 
-            {/* Clear completed */}
-            {(queueStatus?.processed ?? 0) > 0 && (
+            {(queueStatus?.failed ?? 0) > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -546,16 +651,27 @@ export function SitemapImporter() {
                 className="gap-2 text-muted-foreground"
               >
                 <Trash2 className="h-3 w-3" />
-                Clear Failed
+                Limpiar fallidas
               </Button>
             )}
+
+            {/* Manual refresh */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => refetchStatus()}
+              className="gap-2 text-muted-foreground ml-auto"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Actualizar
+            </Button>
           </div>
 
-          {/* Pause notice */}
+          {/* Paused notice */}
           {!queueStatus?.processing && (queueStatus?.remaining ?? 0) > 0 && (
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              Queue is paused — {queueStatus!.remaining.toLocaleString()} URLs waiting. Hit Resume to continue from where it left off.
+              <CheckCircle2 className="h-3 w-3 text-amber-500" />
+              Cola pausada — {queueStatus!.remaining.toLocaleString()} URLs esperando. Haz clic en Reanudar para continuar desde donde se quedó.
             </p>
           )}
 
@@ -564,12 +680,12 @@ export function SitemapImporter() {
             <div className="space-y-2">
               <p className="text-sm font-medium flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-destructive" />
-                Recent Errors (this session)
+                Errores recientes
               </p>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+              <div className="max-h-36 overflow-y-auto space-y-1">
                 {queueStatus.errors.map((err, i) => (
                   <div key={i} className="text-xs p-2 bg-destructive/10 rounded flex items-start gap-2">
-                    <XCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />
+                    <XCircle className="h-3 w-3 text-destructive shrink-0 mt-0.5" />
                     <span className="truncate">{err.url}: {err.error}</span>
                   </div>
                 ))}
@@ -582,14 +698,14 @@ export function SitemapImporter() {
       {/* Tips */}
       <Card className="bg-secondary/20">
         <CardHeader>
-          <CardTitle className="text-base">Important Notes</CardTitle>
+          <CardTitle className="text-base">Notas importantes</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>• Scraping respects a 15-second delay between requests</p>
-          <p>• Processing 100 perfumes takes approximately 25-30 minutes</p>
-          <p>• The queue runs in the backend - you can close this page</p>
-          <p>• Duplicates are automatically skipped</p>
-          <p>• Brand names must match exactly (e.g., "Dior" not "dior")</p>
+          <p>• Se respeta un delay de 15 segundos entre peticiones para evitar bloqueos</p>
+          <p>• 100 fragancias toman aproximadamente 25-30 minutos en procesarse</p>
+          <p>• La cola corre en el backend — puedes cerrar esta página sin interrumpir el proceso</p>
+          <p>• Los duplicados se omiten automáticamente</p>
+          <p>• Los nombres de marcas deben coincidir exactamente (ej. "Dior" no "dior")</p>
         </CardContent>
       </Card>
     </div>
