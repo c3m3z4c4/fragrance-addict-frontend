@@ -556,8 +556,9 @@ export interface QueueStatus {
     total: number;
     processedThisSession?: number;
     failedThisSession?: number;
+    rateLimitedThisSession?: number;
     startedAt: string | null;
-    errors: Array<{ url: string; error: string; time: string }>;
+    errors: Array<{ url: string; error: string; type?: 'error' | 'rate_limit'; time: string }>;
     processingRatePerHour?: number | null;
     etaMs?: number | null;
     catalogDiscovery?: CatalogDiscovery;

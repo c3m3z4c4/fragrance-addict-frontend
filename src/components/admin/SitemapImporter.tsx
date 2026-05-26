@@ -699,31 +699,38 @@ export function SitemapImporter() {
             </div>
           </div>
 
-          {/* Performance metrics row */}
-          {queueStatus?.processing && (
+          {/* Performance metrics row — show while running OR when session has data */}
+          {((queueStatus?.processing) || (queueStatus?.processedThisSession ?? 0) > 0 || (queueStatus?.rateLimitedThisSession ?? 0) > 0) && (
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground bg-muted/30 rounded-lg px-4 py-3">
-              {/* Processing rate */}
-              {queueStatus.processingRatePerHour != null && queueStatus.processingRatePerHour > 0 && (
+              {/* Processing rate — only when active */}
+              {queueStatus?.processing && queueStatus.processingRatePerHour != null && queueStatus.processingRatePerHour > 0 && (
                 <span className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5 text-accent" />
                   <strong className="text-foreground">{queueStatus.processingRatePerHour.toLocaleString()}</strong> fragancias/hora
                 </span>
               )}
-              {/* ETA */}
-              {queueStatus.etaMs != null && queueStatus.etaMs > 0 && (
+              {/* ETA — only when active */}
+              {queueStatus?.processing && queueStatus.etaMs != null && queueStatus.etaMs > 0 && (
                 <span className="flex items-center gap-1.5">
                   <Timer className="h-3.5 w-3.5 text-accent" />
                   {formatEta(queueStatus.etaMs)}
                 </span>
               )}
-              {/* Session count */}
-              {(queueStatus.processedThisSession ?? 0) > 0 && (
-                <span className="flex items-center gap-1.5 ml-auto">
+              {/* Session counts */}
+              {(queueStatus?.processedThisSession ?? 0) > 0 && (
+                <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  Esta sesión: <strong className="text-foreground">{queueStatus.processedThisSession}</strong> procesadas
-                  {(queueStatus.failedThisSession ?? 0) > 0 && (
-                    <>, <span className="text-destructive">{queueStatus.failedThisSession}</span> fallidas</>
+                  Esta sesión: <strong className="text-foreground">{queueStatus!.processedThisSession}</strong> completadas
+                  {(queueStatus!.failedThisSession ?? 0) > 0 && (
+                    <>, <span className="text-destructive">{queueStatus!.failedThisSession}</span> fallidas</>
                   )}
+                </span>
+              )}
+              {/* Rate-limit retries */}
+              {(queueStatus?.rateLimitedThisSession ?? 0) > 0 && (
+                <span className="flex items-center gap-1.5 text-amber-500">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <strong className="text-foreground">{queueStatus!.rateLimitedThisSession}</strong> rate limits (reintentando)
                 </span>
               )}
             </div>
@@ -820,16 +827,34 @@ export function SitemapImporter() {
           {/* Recent Errors */}
           {queueStatus?.errors && queueStatus.errors.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                Errores recientes
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                Actividad reciente
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  ({queueStatus.errors.filter(e => e.type !== 'rate_limit').length} fallos · {queueStatus.errors.filter(e => e.type === 'rate_limit').length} rate limits)
+                </span>
               </p>
-              <div className="max-h-36 overflow-y-auto space-y-1">
-                {queueStatus.errors.map((err, i) => (
-                  <div key={i} className="text-xs p-2 bg-destructive/10 rounded flex items-start gap-2">
-                    <XCircle className="h-3 w-3 text-destructive shrink-0 mt-0.5" />
-                    <span className="truncate">{err.url}: {err.error}</span>
-                  </div>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {[...queueStatus.errors].reverse().map((err, i) => (
+                  err.type === 'rate_limit' ? (
+                    <div key={i} className="text-xs p-2 bg-amber-500/10 border border-amber-500/20 rounded flex items-start gap-2">
+                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-amber-600 font-medium">Rate limit · </span>
+                        <span className="truncate text-muted-foreground">{err.url}</span>
+                        <span className="text-muted-foreground"> — {err.error}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={i} className="text-xs p-2 bg-destructive/10 border border-destructive/20 rounded flex items-start gap-2">
+                      <XCircle className="h-3 w-3 text-destructive shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-destructive font-medium">Error · </span>
+                        <span className="truncate text-muted-foreground">{err.url}</span>
+                        <span className="text-muted-foreground"> — {err.error}</span>
+                      </div>
+                    </div>
+                  )
                 ))}
               </div>
             </div>
