@@ -573,6 +573,17 @@ export interface QueueStatus {
         finishedAt: string | null;
         error: string | null;
     };
+    logoFetchJob?: {
+        running: boolean;
+        source: 'db' | 'algolia';
+        total: number;
+        processed: number;
+        updated: number;
+        failed: number;
+        results: BrandLogoResult[];
+        startedAt: string | null;
+        completedAt: string | null;
+    };
 }
 
 // Fetch URLs from Fragrantica sitemap or brand page
@@ -1123,6 +1134,7 @@ export interface BrandLogosJobStatus {
     success: boolean;
     status?: 'started' | 'already_running' | 'done';
     running: boolean;
+    source?: 'db' | 'algolia';
     total: number;
     processed: number;
     updated: number;
@@ -1134,11 +1146,11 @@ export interface BrandLogosJobStatus {
     error?: string;
 }
 
-export async function fetchBrandLogos(force = false): Promise<BrandLogosJobStatus> {
+export async function fetchBrandLogos(force = false, source: 'db' | 'algolia' = 'db'): Promise<BrandLogosJobStatus> {
     const res = await fetch(`${API_BASE_URL}/api/scrape/brands/logos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ force }),
+        body: JSON.stringify({ force, source }),
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));

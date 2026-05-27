@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getQueueStatus, startQueue } from '@/lib/api';
+import { getQueueStatus, startQueue, fetchBrandLogos } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
   Loader2, CheckCircle2, XCircle, Key, Globe, Play,
-  AlertTriangle, Zap, Database, RefreshCw, Eye, EyeOff, Square,
+  AlertTriangle, Zap, Database, RefreshCw, Eye, EyeOff, Square, Image,
 } from 'lucide-react';
 import { getAuthHeader } from '@/lib/api';
 
@@ -118,6 +118,39 @@ function AlgoliaJobPanel({ job }: { job: any }) {
   );
 }
 
+function LogoFetchPanel({ job }: { job: NonNullable<ReturnType<typeof useQuery>['data']> extends { logoFetchJob?: infer J } ? J : any }) {
+  const progress = job.total > 0 ? (job.processed / job.total) * 100 : 0;
+  const isDone = !job.running && job.completedAt;
+  return (
+    <div className={cn(
+      'rounded-lg border p-4 space-y-3 text-sm',
+      isDone ? 'bg-green-500/10 border-green-500/30' : 'bg-violet-500/10 border-violet-500/30',
+    )}>
+      <div className="flex items-center gap-2 font-medium">
+        {job.running
+          ? <Loader2 className="h-4 w-4 animate-spin text-violet-500 shrink-0" />
+          : <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
+        {job.running ? `Obteniendo logos desde Algolia… (${job.processed}/${job.total})` : 'Logos completados'}
+      </div>
+      {job.total > 0 && <Progress value={progress} className="h-1.5" />}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center p-2 bg-background/60 rounded-lg">
+          <p className="text-base font-bold tabular-nums">{job.total.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">Total marcas</p>
+        </div>
+        <div className="text-center p-2 bg-green-500/20 rounded-lg">
+          <p className="text-base font-bold text-green-600 tabular-nums">{job.updated.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">Logos encontrados</p>
+        </div>
+        <div className="text-center p-2 bg-muted/40 rounded-lg">
+          <p className="text-base font-bold text-muted-foreground tabular-nums">{job.failed.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">Sin logo</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function AlgoliaImporter() {
@@ -133,6 +166,7 @@ export function AlgoliaImporter() {
     refetchInterval: (q) => {
       const d = q.state.data;
       if (d?.algoliaJob?.active) return 2000;
+      if (d?.logoFetchJob?.running) return 3000;
       if (d?.processing) return 3000;
       return false;
     },
@@ -146,6 +180,7 @@ export function AlgoliaImporter() {
   });
 
   const algoliaJob = queueStatus?.algoliaJob;
+  const logoJob = queueStatus?.logoFetchJob;
   const keyValid = algoliaStatus?.valid ?? false;
   const keyConfigured = algoliaStatus?.configured ?? false;
 
@@ -200,6 +235,25 @@ export function AlgoliaImporter() {
       toast({ title: 'Cola iniciada' });
       queryClient.invalidateQueries({ queryKey: ['queue-status'] });
     },
+  });
+
+  const fetchLogosMutation = useMutation({
+    mutationFn: () => fetchBrandLogos(false, 'algolia'),
+    onSuccess: (result) => {
+      if (result.success) {
+        if (result.status === 'already_running') {
+          toast({ title: 'Ya en curso', description: 'El job de logos ya está corriendo' });
+        } else if (result.status === 'done' && result.total === 0) {
+          toast({ title: 'Sin pendientes', description: 'Todas las marcas de Algolia ya tienen logo' });
+        } else {
+          toast({ title: 'Buscando logos', description: `Procesando ${result.total?.toLocaleString()} marcas en segundo plano` });
+          setTimeout(() => refetchQueue(), 1000);
+        }
+      } else {
+        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      }
+    },
+    onError: (err: Error) => toast({ title: 'Error', description: err.message, variant: 'destructive' }),
   });
 
   return (
@@ -319,6 +373,11 @@ export function AlgoliaImporter() {
               <AlgoliaJobPanel job={algoliaJob} />
             )}
 
+            {/* Logo fetch job panel */}
+            {logoJob && (logoJob.running || logoJob.completedAt) && logoJob.source === 'algolia' && (
+              <LogoFetchPanel job={logoJob} />
+            )}
+
             {/* Controls */}
             <div className="flex flex-wrap gap-2">
               {!algoliaJob?.active ? (
@@ -352,6 +411,20 @@ export function AlgoliaImporter() {
                   Iniciar cola ({queueStatus!.remaining.toLocaleString()} pendientes)
                 </Button>
               )}
+
+              <Button
+                variant="outline"
+                onClick={() => fetchLogosMutation.mutate()}
+                disabled={fetchLogosMutation.isPending || logoJob?.running}
+                className="gap-2 border-violet-500/40 hover:border-violet-500"
+              >
+                {fetchLogosMutation.isPending || logoJob?.running
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Image className="h-4 w-4" />}
+                {logoJob?.running
+                  ? `Logos… ${logoJob.processed}/${logoJob.total}`
+                  : 'Obtener logos de marcas'}
+              </Button>
             </div>
 
             {!algoliaJob?.active && (
