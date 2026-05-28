@@ -1,14 +1,157 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { scrapePerfume, batchScrapePerfumes } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { scrapePerfume, batchScrapePerfumes, API_BASE_URL } from '@/lib/api';
+import { getAuthToken } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Loader2, Link as LinkIcon, FileText, CheckCircle2, XCircle, Clock, Globe, ShieldCheck, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// ─── Scraping-API proxy config ────────────────────────────────────────────────
+
+interface ProxyConfig {
+  success: boolean;
+  provider: string | null;
+  label: string | null;
+  configured: boolean;
+  availableProviders: { id: string; label: string; signupUrl: string }[];
+}
+
+function ScrapeProxyConfig() {
+  const token = getAuthToken() || '';
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const queryClient = useQueryClient();
+
+  const [provider, setProvider] = useState('scrapingbee');
+  const [apiKey, setApiKey] = useState('');
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const { data: config } = useQuery<ProxyConfig>({
+    queryKey: ['proxy-config'],
+    queryFn: async () => {
+      const r = await fetch(`${API_BASE_URL}/api/scrape/proxy/config`, { headers });
+      return r.json();
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API_BASE_URL}/api/scrape/proxy/config`, {
+        method: 'POST', headers, body: JSON.stringify({ provider, apiKey }),
+      });
+      return r.json();
+    },
+    onSuccess: (res) => {
+      toast({
+        title: res.success ? 'Proxy configurado' : 'Error',
+        description: res.success ? `${res.label} activo. Agrega las vars de entorno para persistir.` : res.error,
+        variant: res.success ? 'default' : 'destructive',
+      });
+      setApiKey('');
+      queryClient.invalidateQueries({ queryKey: ['proxy-config'] });
+    },
+  });
+
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API_BASE_URL}/api/scrape/proxy/test`, {
+        method: 'POST', headers, body: JSON.stringify({}),
+      });
+      return r.json();
+    },
+    onSuccess: (res) => {
+      setTestResult({
+        ok: res.success && !res.blocked,
+        msg: res.success && !res.blocked
+          ? `OK · ${res.bytes} bytes · JSON-LD: ${res.hasJsonLd ? 'sí' : 'no'} · notas: ${res.hasNotes ? 'sí' : 'no'}`
+          : `Bloqueado/err: ${res.title || res.error || 'desconocido'}`,
+      });
+    },
+    onError: (e) => setTestResult({ ok: false, msg: String(e) }),
+  });
+
+  return (
+    <Card className="border-accent/20">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Globe className="h-4 w-4 text-accent" /> Proxy de scraping (recomendado)
+          {config?.configured && (
+            <Badge variant="secondary" className="ml-2 text-xs">
+              <ShieldCheck className="h-3 w-3 mr-1" /> {config.label}
+            </Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Fragrantica bloquea la IP del servidor con Cloudflare. Un API de scraping con IP residencial
+          obtiene el HTML real (notas, acordes, votos) sin usar Chromium en el VPS — elimina el pico de CPU
+          y el bloqueo de Cloudflare a la vez.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid sm:grid-cols-[180px_1fr] gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Proveedor</label>
+            <select
+              value={provider}
+              onChange={e => setProvider(e.target.value)}
+              className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+            >
+              {(config?.availableProviders || []).map(p => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">API Key</label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                placeholder="Pega tu API key del proveedor…"
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                className="text-sm font-mono h-9"
+              />
+              <Button size="sm" className="h-9" disabled={!apiKey || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm" variant="outline" className="h-8 text-xs"
+            disabled={!config?.configured || testMutation.isPending}
+            onClick={() => testMutation.mutate()}
+          >
+            {testMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+            Probar bypass CF
+          </Button>
+          {testResult && (
+            <span className={cn('text-xs', testResult.ok ? 'text-green-600' : 'text-red-500')}>
+              {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <span>Tiers gratis:</span>
+          {(config?.availableProviders || []).map(p => (
+            <a key={p.id} href={p.signupUrl} target="_blank" rel="noreferrer"
+               className="inline-flex items-center gap-1 text-accent hover:underline">
+              {p.label} <ExternalLink className="h-3 w-3" />
+            </a>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 interface ScrapeResult {
   url: string;
@@ -94,6 +237,7 @@ export function ScraperPanel() {
 
   return (
     <div className="space-y-6">
+      <ScrapeProxyConfig />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
