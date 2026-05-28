@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import {
     Loader2, CheckCircle2, XCircle, Eye, EyeOff,
     Zap, TestTube, Key, ChevronDown, ChevronUp, TriangleAlert,
+    Sparkles, Play, Square,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -275,6 +276,200 @@ function ProviderCard({ p, authToken }: { p: AIProvider; authToken: string }) {
     );
 }
 
+// ─── AI Enrichment section ────────────────────────────────────────────────────
+
+interface EnrichConfig {
+    configured: boolean;
+    provider: string | null;
+    model: string | null;
+    minConfidence: number;
+    enrichableFields: string[];
+}
+
+interface BulkStatus {
+    running: boolean;
+    total: number;
+    processed: number;
+    enriched: number;
+    skipped: number;
+    failed: number;
+    startedAt: string | null;
+    finishedAt: string | null;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+    notes: 'Notas (top/heart/base)',
+    accords: 'Acordes principales',
+    perfumer: 'Perfumista',
+    description: 'Descripción',
+    concentration: 'Concentración',
+};
+
+function AIEnrichmentSection({ authToken, activeProviderLabel }: { authToken: string; activeProviderLabel: string | null }) {
+    const queryClient = useQueryClient();
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` };
+
+    const [fields, setFields] = useState<string[]>(['notes', 'accords', 'perfumer', 'description', 'concentration']);
+    const [minConfidence, setMinConfidence] = useState(0.6);
+    const [limit, setLimit] = useState(50);
+
+    const { data: config } = useQuery<EnrichConfig>({
+        queryKey: ['enrich-config'],
+        queryFn: async () => {
+            const r = await fetch(`${API_BASE_URL}/api/scrape/enrich-ai/config`, { headers });
+            return r.json();
+        },
+    });
+
+    const { data: bulk } = useQuery<BulkStatus>({
+        queryKey: ['enrich-bulk-status'],
+        queryFn: async () => {
+            const r = await fetch(`${API_BASE_URL}/api/scrape/enrich-ai/bulk/status`, { headers });
+            return r.json();
+        },
+        refetchInterval: (q) => ((q.state.data as BulkStatus)?.running ? 1500 : false),
+    });
+
+    const startBulk = useMutation({
+        mutationFn: async () => {
+            const r = await fetch(`${API_BASE_URL}/api/scrape/enrich-ai/bulk`, {
+                method: 'POST', headers,
+                body: JSON.stringify({ limit, minConfidence, fields }),
+            });
+            return r.json();
+        },
+        onSuccess: (res) => {
+            toast({
+                title: res.success ? 'Enriquecimiento iniciado' : 'Error',
+                description: res.success ? `${res.total} perfumes en cola` : res.error,
+                variant: res.success ? 'default' : 'destructive',
+            });
+            queryClient.invalidateQueries({ queryKey: ['enrich-bulk-status'] });
+        },
+    });
+
+    const stopBulk = useMutation({
+        mutationFn: async () => {
+            await fetch(`${API_BASE_URL}/api/scrape/enrich-ai/bulk/stop`, { method: 'POST', headers });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['enrich-bulk-status'] }),
+    });
+
+    const toggleField = (f: string) =>
+        setFields(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
+
+    const running = bulk?.running;
+    const pct = bulk && bulk.total > 0 ? Math.round((bulk.processed / bulk.total) * 100) : 0;
+
+    return (
+        <Card className="border-accent/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="h-4 w-4 text-accent" /> Enriquecimiento con IA
+                </CardTitle>
+                <CardDescription>
+                    Rellena notas, acordes, perfumista y descripción de perfumes incompletos usando el proveedor de IA activo.
+                    Solo se guardan resultados con confianza ≥ umbral (evita alucinaciones).
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {!config?.configured ? (
+                    <div className="flex items-center gap-2 text-xs text-amber-600">
+                        <TriangleAlert className="h-3.5 w-3.5" /> No hay proveedor de IA activo. Activa uno arriba.
+                    </div>
+                ) : (
+                    <div className="text-xs text-muted-foreground">
+                        Usando <strong className="text-foreground">{activeProviderLabel || config.provider}</strong>
+                        {config.model && <> · <code className="bg-muted px-1 rounded">{config.model}</code></>}
+                    </div>
+                )}
+
+                {/* Field selection */}
+                <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Campos a rellenar</label>
+                    <div className="flex flex-wrap gap-2">
+                        {(config?.enrichableFields || Object.keys(FIELD_LABELS)).map(f => (
+                            <button
+                                key={f}
+                                type="button"
+                                onClick={() => toggleField(f)}
+                                className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
+                                    fields.includes(f)
+                                        ? 'bg-accent/10 text-accent border-accent/30'
+                                        : 'border-input text-muted-foreground hover:bg-muted'
+                                }`}
+                            >
+                                {FIELD_LABELS[f] || f}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Confidence + limit */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                            Confianza mínima: <span className="text-foreground">{minConfidence.toFixed(2)}</span>
+                        </label>
+                        <input
+                            type="range" min={0} max={1} step={0.05}
+                            value={minConfidence}
+                            onChange={e => setMinConfidence(parseFloat(e.target.value))}
+                            className="w-full accent-[hsl(var(--accent))]"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Límite por lote</label>
+                        <Input
+                            type="number" min={1} max={500}
+                            value={limit}
+                            onChange={e => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-8 text-xs"
+                        />
+                    </div>
+                </div>
+
+                {/* Progress */}
+                {bulk && (bulk.running || bulk.processed > 0) && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{running ? 'Procesando…' : 'Último lote'}</span>
+                            <span>{bulk.processed} / {bulk.total} ({pct}%)</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                            <span className="text-green-600">✓ {bulk.enriched} enriquecidos</span>
+                            <span>↷ {bulk.skipped} baja confianza</span>
+                            {bulk.failed > 0 && <span className="text-red-500">✗ {bulk.failed} fallidos</span>}
+                        </div>
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                    {running ? (
+                        <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={() => stopBulk.mutate()}>
+                            <Square className="h-3 w-3 mr-1" /> Detener
+                        </Button>
+                    ) : (
+                        <Button
+                            size="sm"
+                            className="h-8 text-xs"
+                            disabled={!config?.configured || fields.length === 0 || startBulk.isPending}
+                            onClick={() => startBulk.mutate()}
+                        >
+                            {startBulk.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
+                            Enriquecer incompletos
+                        </Button>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function AISettings() {
@@ -325,6 +520,8 @@ export function AISettings() {
                 <TriangleAlert className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                 <p>Las API keys se guardan en la base de datos. Para mayor seguridad en producción, puedes configurarlas como variables de entorno (<code className="bg-muted px-1 rounded">GEMINI_API_KEY</code>, <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code>, <code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>). Las variables de entorno se usan como fallback si no hay key en DB.</p>
             </div>
+
+            <AIEnrichmentSection authToken={token} activeProviderLabel={active?.label || null} />
         </div>
     );
 }
