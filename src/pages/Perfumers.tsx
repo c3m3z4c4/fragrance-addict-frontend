@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { Search as SearchIcon, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { fetchPerfumers } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 function nameHue(name: string): number {
@@ -96,6 +98,8 @@ function PerfumerCard({ name, count, imageUrl, index }: PerfumerCardProps) {
 
 const Perfumers = () => {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') || '';
 
   const { data: perfumers = [], isLoading } = useQuery({
     queryKey: ['perfumers'],
@@ -103,12 +107,25 @@ const Perfumers = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return perfumers;
+    return perfumers.filter((p) => p.name.toLowerCase().includes(q));
+  }, [perfumers, query]);
+
+  const setQuery = (q: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (q) next.set('q', q);
+    else next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-16">
-        <div className="text-center mb-12 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
+        <div className="text-center mb-8 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
           <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-medium mb-4">
             {t('perfumers.title')}
           </h1>
@@ -117,12 +134,37 @@ const Perfumers = () => {
           </p>
         </div>
 
+        {/* Search by perfumer name */}
+        <div className="max-w-xl mx-auto mb-12">
+          <div className="relative">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar perfumista…"
+              className="pl-10 pr-10 h-12 rounded-full"
+              aria-label="Buscar perfumista"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                aria-label="Limpiar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
           {isLoading
             ? Array.from({ length: 15 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
               ))
-            : perfumers.map((p, index) => (
+            : filtered.map((p, index) => (
                 <PerfumerCard
                   key={p.name}
                   name={p.name}
@@ -132,6 +174,12 @@ const Perfumers = () => {
                 />
               ))}
         </div>
+
+        {!isLoading && query.trim() && filtered.length === 0 && (
+          <p className="text-center text-muted-foreground py-16">
+            No se encontraron perfumistas para “{query.trim()}”.
+          </p>
+        )}
       </main>
 
       <Footer />

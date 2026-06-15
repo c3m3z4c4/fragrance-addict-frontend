@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Star, ExternalLink } from 'lucide-react';
 import type { APIPerfume } from '@/lib/api';
+import { Carousel } from '@/components/Carousel';
 
 interface SimilarPerfumeExternal {
   name: string;
@@ -30,13 +31,12 @@ export function SimilarPerfumesSection({ similarFromDatabase, similarExternal }:
       {hasDatabase && (
         <div className="mb-8">
           <p className="text-sm text-muted-foreground mb-4">{t('similar.fromDatabase')}</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {similarFromDatabase.map((perfume, index) => (
+          <Carousel slideClassName="w-40 md:w-48" ariaLabel={t('similar.title')}>
+            {similarFromDatabase.map((perfume) => (
               <Link
                 key={perfume.id}
                 to={`/perfume/${perfume.id}`}
-                className="group block opacity-0 animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+                className="group block"
               >
                 <div className="hover-lift">
                   <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary/20 mb-3">
@@ -60,7 +60,7 @@ export function SimilarPerfumesSection({ similarFromDatabase, similarExternal }:
                 </div>
               </Link>
             ))}
-          </div>
+          </Carousel>
         </div>
       )}
 
