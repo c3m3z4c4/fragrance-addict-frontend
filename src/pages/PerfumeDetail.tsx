@@ -13,7 +13,7 @@ import { BrandBadge } from '@/components/BrandBadge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFavorites } from '@/hooks/useFavorites';
-import { usePerfumeDetail, usePerfumes, findSimilarPerfumes } from '@/hooks/usePerfumeSearch';
+import { usePerfumeDetail, useSimilarPerfumes } from '@/hooks/usePerfumeSearch';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -29,16 +29,13 @@ const PerfumeDetail = () => {
   const { logEvent } = useActivity();
 
   const { data: perfume, isLoading, error } = usePerfumeDetail(id || '');
-  const { data: allPerfumes } = usePerfumes(1, 50);
   const { data: brands } = useQuery({ queryKey: ['brands'], queryFn: fetchBrands, staleTime: 5 * 60 * 1000 });
+  const { data: similarPerfumes = [] } = useSimilarPerfumes(id || '', 4);
 
   const favorite = perfume ? isFavorite(perfume.id) : false;
   const brandImageUrl = perfume && brands
     ? (brands.find(b => b.name === perfume.brand)?.imageUrl ?? null)
     : null;
-  const similarPerfumes = perfume && allPerfumes?.perfumes
-    ? findSimilarPerfumes(perfume, allPerfumes.perfumes, 4)
-    : [];
 
   useEffect(() => {
     if (perfume?.id && perfume?.name) {

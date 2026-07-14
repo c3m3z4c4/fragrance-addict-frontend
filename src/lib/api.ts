@@ -224,6 +224,27 @@ export async function fetchPerfumeById(id: string): Promise<APIPerfume | null> {
     }
 }
 
+// Get similar perfumes by shared notes (server-side, whole catalogue).
+// Ranking: shared note in the same pyramid phase = 2 pts, different phase = 1 pt.
+export async function fetchSimilarPerfumes(
+    id: string,
+    limit = 4
+): Promise<APIPerfume[]> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/perfumes/${id}/similar?limit=${limit}`
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        const items = Array.isArray(data.data) ? data.data : [];
+        return items
+            .filter((p: any) => p?.id && p?.name)
+            .map((p: any) => deepSanitizePerfume(p));
+    } catch {
+        return [];
+    }
+}
+
 // Get perfumes by brand
 export async function fetchPerfumesByBrand(
     brand: string

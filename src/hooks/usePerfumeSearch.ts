@@ -3,6 +3,7 @@ import {
     searchPerfumes,
     fetchPerfumes,
     fetchPerfumeById,
+    fetchSimilarPerfumes,
     type APIPerfume,
 } from '@/lib/api';
 
@@ -64,68 +65,18 @@ export function usePerfumeDetail(id: string) {
     });
 }
 
-// Find similar perfumes based on accords or notes
-export function findSimilarPerfumes(
-    currentPerfume: APIPerfume,
-    allPerfumes: APIPerfume[],
-    limit = 4
-): APIPerfume[] {
-    if (!currentPerfume || !allPerfumes.length) return [];
-
-    const currentAccords = currentPerfume.accords || [];
-    const currentNotes = [
-        ...(currentPerfume.notes?.top || []),
-        ...(currentPerfume.notes?.heart || []),
-        ...(currentPerfume.notes?.base || []),
-    ];
-
-    const scored = allPerfumes
-        .filter((p) => p.id !== currentPerfume.id)
-        .map((perfume) => {
-            let score = 0;
-
-            // Match accords
-            const perfumeAccords = perfume.accords || [];
-            currentAccords.forEach((accord) => {
-                if (
-                    perfumeAccords.some((a) =>
-                        a.toLowerCase().includes(accord.toLowerCase())
-                    )
-                ) {
-                    score += 3;
-                }
-            });
-
-            // Match notes
-            const perfumeNotes = [
-                ...(perfume.notes?.top || []),
-                ...(perfume.notes?.heart || []),
-                ...(perfume.notes?.base || []),
-            ];
-            currentNotes.forEach((note) => {
-                if (
-                    perfumeNotes.some((n) =>
-                        n.toLowerCase().includes(note.toLowerCase())
-                    )
-                ) {
-                    score += 1;
-                }
-            });
-
-            // Same brand bonus
-            if (perfume.brand === currentPerfume.brand) {
-                score += 2;
-            }
-
-            // Same gender preference
-            if (perfume.gender === currentPerfume.gender) {
-                score += 1;
-            }
-
-            return { perfume, score };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
-
-    return scored.map((s) => s.perfume);
+/**
+ * Similar perfumes computed SERVER-SIDE over the whole catalogue by shared
+ * notes (same-phase match = 2 pts, cross-phase = 1 pt). Replaces the old
+ * client-side findSimilarPerfumes, which only compared against the first
+ * page of results.
+ */
+export function useSimilarPerfumes(id: string, limit = 4) {
+    return useQuery({
+        queryKey: ['perfumes', 'similar', id, limit],
+        queryFn: () => fetchSimilarPerfumes(id, limit),
+        enabled: !!id,
+        staleTime: 1000 * 60 * 10,
+    });
 }
+
